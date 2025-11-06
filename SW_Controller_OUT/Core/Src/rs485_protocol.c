@@ -7,6 +7,7 @@
 
 #include "rs485_protocol.h"
 #include "debug_uart.h"
+#include "version.h"
 #include <string.h>
 
 /* External UART Handle */
