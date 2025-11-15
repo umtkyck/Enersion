@@ -1,0 +1,5 @@
+../Core/Src/debug_uart.c:33:6:Debug_Init	8	static
+../Core/Src/debug_uart.c:44:6:Debug_SetLevel	16	static
+../Core/Src/debug_uart.c:55:6:Debug_Print	28	static
+../Core/Src/debug_uart.c:100:6:Debug_PrintRaw	16	static
+../Core/Src/debug_uart.c:111:6:Debug_PrintHex	32	static

@@ -60,8 +60,8 @@ all: main-build
 main-build: SW_Controller_OUT.elf secondary-outputs
 
 # Tool invocations
-SW_Controller_OUT.elf SW_Controller_OUT.map: $(OBJS) $(USER_OBJS) C:\Users\Mustafa\STM32CubeIDE\workspace_1.19.0\SW_Controller_OUT\STM32H753ZITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "SW_Controller_OUT.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\Users\Mustafa\STM32CubeIDE\workspace_1.19.0\SW_Controller_OUT\STM32H753ZITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="SW_Controller_OUT.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+SW_Controller_OUT.elf SW_Controller_OUT.map: $(OBJS) $(USER_OBJS) C:\github\Enersion\SW_Controller_OUT\STM32H753ZITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "SW_Controller_OUT.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\github\Enersion\SW_Controller_OUT\STM32H753ZITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="SW_Controller_OUT.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

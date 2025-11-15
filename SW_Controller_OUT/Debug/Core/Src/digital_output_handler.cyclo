@@ -1,0 +1,6 @@
+../Core/Src/digital_output_handler.c:54:6:DigitalOutput_Init	3
+../Core/Src/digital_output_handler.c:78:6:DigitalOutput_Set	3
+../Core/Src/digital_output_handler.c:97:6:DigitalOutput_SetAll	4
+../Core/Src/digital_output_handler.c:119:9:DigitalOutput_Get	2
+../Core/Src/digital_output_handler.c:133:6:DigitalOutput_GetAll	5
+../Core/Src/digital_output_handler.c:156:6:DigitalOutput_Toggle	2

@@ -1,0 +1,41 @@
+MINIMAL TEST - Find the Problem
+================================
+
+Add this to main.c, BEFORE all initialization:
+
+In main() function, RIGHT AFTER HAL_Init():
+
+```c
+int main(void)
+{
+  HAL_Init();
+  
+  /* MINIMAL TEST - ADD THIS */
+  SystemClock_Config();
+  MX_GPIO_Init();
+  MX_USART1_UART_Init();
+  
+  char test_msg[] = "ALIVE\r\n";
+  while(1) {
+    HAL_UART_Transmit(&huart1, (uint8_t*)test_msg, 7, 100);
+    HAL_Delay(1000);
+  }
+  /* END TEST */
+  
+  // ... rest of code
+}
+```
+
+This will:
+1. Initialize only UART1 (Debug)
+2. Send "ALIVE" every 1 second
+3. Skip all complex initialization
+
+If you see "ALIVE" on COM7:
+→ Basic UART works, problem is in complex init
+
+If you DON'T see "ALIVE":
+→ UART1 configuration problem OR wrong binary flashed
+
+BUILD + FLASH + CHECK COM7
+
