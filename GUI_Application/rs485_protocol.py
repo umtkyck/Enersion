@@ -327,6 +327,8 @@ class RS485Protocol:
             
             with self.lock:
                 self.serial.write(encoded)
+                self.serial.flush()  # Force immediate transmission
+                time.sleep(0.02)  # 20ms delay for MCU processing
                 self.tx_count += 1
             
             return True
@@ -494,7 +496,7 @@ class RS485Protocol:
     
     def write_digital_outputs(self, dest_addr: int, outputs: bytes) -> bool:
         """Write digital outputs"""
-        response = self.send_command_and_wait(dest_addr, RS485Command.CMD_WRITE_DO, outputs)
+        response = self.send_command_and_wait(dest_addr, RS485Command.CMD_WRITE_DO, outputs, timeout=2.0)
         return response is not None and response.command == RS485Command.CMD_DO_RESPONSE
     
     def read_digital_outputs(self, dest_addr: int) -> Optional[bytes]:

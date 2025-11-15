@@ -27,7 +27,7 @@ from version import *
 import serial.tools.list_ports
 
 class HealthMonitorWorker(QObject):
-    """Worker thread for health monitoring"""
+    """Worker thread for health monitoring - Digital OUT Controller Only"""
     
     health_updated = pyqtSignal(int, dict)  # mcu_id, health_data
     connection_lost = pyqtSignal(int)  # mcu_id
@@ -37,9 +37,7 @@ class HealthMonitorWorker(QObject):
         self.protocol = protocol
         self.running = False
         self.mcu_addresses = [
-            RS485_ADDR_CONTROLLER_420,
-            RS485_ADDR_CONTROLLER_DIO,
-            RS485_ADDR_CONTROLLER_OUT
+            RS485_ADDR_CONTROLLER_OUT  # Only monitor OUT controller
         ]
     
     def start_monitoring(self):
@@ -328,11 +326,11 @@ class AnalogInputWidget(QGroupBox):
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to read analog inputs: {e}")
 
-class DigitalIOWidget(QGroupBox):
-    """Widget for digital I/O control"""
+class DigitalOutputWidget(QGroupBox):
+    """Widget for digital output control - 56 channels"""
     
     def __init__(self, protocol: RS485Protocol):
-        super().__init__("Digital I/O Control")
+        super().__init__("Digital Output Control - 56 Channels")
         self.protocol = protocol
         self.init_ui()
     
@@ -340,46 +338,24 @@ class DigitalIOWidget(QGroupBox):
         """Initialize UI"""
         layout = QVBoxLayout()
         
-        # Digital Inputs
-        di_group = QGroupBox("Digital Inputs (DIO Controller) - 56 channels")
-        di_scroll = QScrollArea()
-        di_scroll.setWidgetResizable(True)
-        di_scroll.setMinimumHeight(200)
-        di_scroll.setMaximumHeight(300)
-        di_widget = QWidget()
-        di_layout = QGridLayout()
-        di_layout.setSpacing(3)
-        
-        self.di_indicators = []
-        for i in range(56):
-            label = QLabel(f"DI{i}:")
-            label.setMinimumWidth(35)
-            indicator = QLabel("○")
-            indicator.setStyleSheet("font-size: 16px;")
-            di_layout.addWidget(label, i // 8, (i % 8) * 2)
-            di_layout.addWidget(indicator, i // 8, (i % 8) * 2 + 1)
-            self.di_indicators.append(indicator)
-        
-        di_widget.setLayout(di_layout)
-        di_scroll.setWidget(di_widget)
-        di_group_layout = QVBoxLayout()
-        di_group_layout.addWidget(di_scroll)
-        di_group.setLayout(di_group_layout)
-        layout.addWidget(di_group)
+        # Info label
+        info_label = QLabel("Controller OUT (Address: 0x03) - RS485 Digital Output Module")
+        info_label.setStyleSheet("color: #0066cc; font-weight: bold; padding: 5px;")
+        layout.addWidget(info_label)
         
         # Digital Outputs
-        do_group = QGroupBox("Digital Outputs (OUT Controller) - 56 channels")
+        do_group = QGroupBox("Digital Outputs (DO0 - DO55)")
         do_scroll = QScrollArea()
         do_scroll.setWidgetResizable(True)
-        do_scroll.setMinimumHeight(200)
-        do_scroll.setMaximumHeight(300)
+        do_scroll.setMinimumHeight(300)
         do_widget = QWidget()
         do_layout = QGridLayout()
-        do_layout.setSpacing(3)
+        do_layout.setSpacing(5)
         
         self.do_checkboxes = []
         for i in range(56):
-            checkbox = QCheckBox(f"DO{i}")
+            checkbox = QCheckBox(f"DO{i:02d}")
+            checkbox.setMinimumWidth(70)
             checkbox.stateChanged.connect(self.on_output_changed)
             do_layout.addWidget(checkbox, i // 8, i % 8)
             self.do_checkboxes.append(checkbox)
@@ -394,42 +370,36 @@ class DigitalIOWidget(QGroupBox):
         # Control buttons
         button_layout = QHBoxLayout()
         
-        self.read_di_btn = QPushButton("Read Inputs")
-        self.read_di_btn.clicked.connect(self.read_inputs)
-        button_layout.addWidget(self.read_di_btn)
-        
-        self.write_do_btn = QPushButton("Write Outputs")
+        self.write_do_btn = QPushButton("✓ Write Outputs to Controller")
+        self.write_do_btn.setMinimumHeight(40)
+        self.write_do_btn.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
         self.write_do_btn.clicked.connect(self.write_outputs)
         button_layout.addWidget(self.write_do_btn)
         
-        self.read_do_btn = QPushButton("Read Outputs")
+        self.read_do_btn = QPushButton("↻ Read Current Output State")
+        self.read_do_btn.setMinimumHeight(40)
+        self.read_do_btn.setStyleSheet("background-color: #2196F3; color: white; font-weight: bold;")
         self.read_do_btn.clicked.connect(self.read_outputs)
         button_layout.addWidget(self.read_do_btn)
         
+        self.all_on_btn = QPushButton("All ON")
+        self.all_on_btn.setMinimumHeight(40)
+        self.all_on_btn.clicked.connect(self.set_all_on)
+        button_layout.addWidget(self.all_on_btn)
+        
+        self.all_off_btn = QPushButton("All OFF")
+        self.all_off_btn.setMinimumHeight(40)
+        self.all_off_btn.clicked.connect(self.set_all_off)
+        button_layout.addWidget(self.all_off_btn)
+        
         layout.addLayout(button_layout)
         
+        # Status info
+        self.status_label = QLabel("Ready - Select outputs and click 'Write Outputs'")
+        self.status_label.setStyleSheet("padding: 5px; background-color: #f0f0f0;")
+        layout.addWidget(self.status_label)
+        
         self.setLayout(layout)
-    
-    def read_inputs(self):
-        """Read digital inputs (56 channels)"""
-        try:
-            data = self.protocol.read_digital_inputs(RS485_ADDR_CONTROLLER_DIO)
-            if data:
-                # Update indicators (56 inputs = 7 bytes)
-                for i in range(56):
-                    byte_idx = i // 8
-                    bit_idx = i % 8
-                    if byte_idx < len(data):
-                        state = (data[byte_idx] >> bit_idx) & 0x01
-                        indicator = self.di_indicators[i]
-                        if state:
-                            indicator.setText("●")
-                            indicator.setStyleSheet("color: green; font-size: 16px;")
-                        else:
-                            indicator.setText("○")
-                            indicator.setStyleSheet("color: gray; font-size: 16px;")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to read inputs: {e}")
     
     def write_outputs(self):
         """Write digital outputs (56 channels)"""
@@ -443,22 +413,35 @@ class DigitalIOWidget(QGroupBox):
                     bit_idx = i % 8
                     output_bytes[byte_idx] |= (1 << bit_idx)
             
+            # Count active outputs
+            active_count = sum(1 for cb in self.do_checkboxes if cb.isChecked())
+            
+            self.status_label.setText(f"Writing {active_count} active outputs...")
+            QApplication.processEvents()
+            
             success = self.protocol.write_digital_outputs(RS485_ADDR_CONTROLLER_OUT, bytes(output_bytes))
             
             if success:
-                QMessageBox.information(self, "Success", "Outputs written successfully (56 channels)")
+                self.status_label.setText(f"✓ Success! {active_count} outputs written to controller")
+                self.status_label.setStyleSheet("padding: 5px; background-color: #d4edda; color: #155724;")
             else:
-                QMessageBox.warning(self, "Error", "Failed to write outputs")
+                self.status_label.setText("✗ Error: Failed to write outputs (no response from controller)")
+                self.status_label.setStyleSheet("padding: 5px; background-color: #f8d7da; color: #721c24;")
                 
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to write outputs: {e}")
+            self.status_label.setText(f"✗ Error: {e}")
+            self.status_label.setStyleSheet("padding: 5px; background-color: #f8d7da; color: #721c24;")
     
     def read_outputs(self):
         """Read current output state (56 channels)"""
         try:
+            self.status_label.setText("Reading output state from controller...")
+            QApplication.processEvents()
+            
             data = self.protocol.read_digital_outputs(RS485_ADDR_CONTROLLER_OUT)
             if data:
                 # Update checkboxes (56 outputs = 7 bytes)
+                active_count = 0
                 for i in range(56):
                     byte_idx = i // 8
                     bit_idx = i % 8
@@ -466,16 +449,40 @@ class DigitalIOWidget(QGroupBox):
                         state = (data[byte_idx] >> bit_idx) & 0x01
                         if i < len(self.do_checkboxes):
                             self.do_checkboxes[i].setChecked(bool(state))
+                            if state:
+                                active_count += 1
+                
+                self.status_label.setText(f"✓ Read complete: {active_count} outputs are active")
+                self.status_label.setStyleSheet("padding: 5px; background-color: #d4edda; color: #155724;")
+            else:
+                self.status_label.setText("✗ Error: Failed to read outputs (no response from controller)")
+                self.status_label.setStyleSheet("padding: 5px; background-color: #f8d7da; color: #721c24;")
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to read outputs: {e}")
+            self.status_label.setText(f"✗ Error: {e}")
+            self.status_label.setStyleSheet("padding: 5px; background-color: #f8d7da; color: #721c24;")
+    
+    def set_all_on(self):
+        """Set all outputs to ON"""
+        for checkbox in self.do_checkboxes:
+            checkbox.setChecked(True)
+        self.status_label.setText("All outputs set to ON (not written yet - click 'Write Outputs')")
+        self.status_label.setStyleSheet("padding: 5px; background-color: #fff3cd; color: #856404;")
+    
+    def set_all_off(self):
+        """Set all outputs to OFF"""
+        for checkbox in self.do_checkboxes:
+            checkbox.setChecked(False)
+        self.status_label.setText("All outputs set to OFF (not written yet - click 'Write Outputs')")
+        self.status_label.setStyleSheet("padding: 5px; background-color: #fff3cd; color: #856404;")
     
     def on_output_changed(self):
         """Handle output checkbox change"""
-        # Could auto-write on change if desired
-        pass
+        active_count = sum(1 for cb in self.do_checkboxes if cb.isChecked())
+        self.status_label.setText(f"{active_count} outputs selected (click 'Write Outputs' to apply)")
+        self.status_label.setStyleSheet("padding: 5px; background-color: #f0f0f0;")
 
 class MainWindow(QMainWindow):
-    """Main Application Window"""
+    """Main Application Window - Digital OUT Controller Only"""
     
     def __init__(self):
         super().__init__()
@@ -488,8 +495,9 @@ class MainWindow(QMainWindow):
     
     def init_ui(self):
         """Initialize user interface"""
-        self.setWindowTitle(get_version_string())
-        self.setMinimumSize(1200, 900)  # Increased for better visibility of tabs
+        self.setWindowTitle(get_version_string() + " - Digital OUT Controller")
+        self.setMinimumSize(800, 600)
+        self.resize(800, 600)  # Default window size
         
         # Central widget
         central_widget = QWidget()
@@ -499,12 +507,12 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(main_layout)
         
         # Connection panel
-        conn_group = QGroupBox("Connection")
+        conn_group = QGroupBox("RS485 Connection")
         conn_layout = QHBoxLayout()
         
         conn_layout.addWidget(QLabel("Port:"))
         self.port_combo = QComboBox()
-        self.port_combo.setMinimumWidth(150)
+        self.port_combo.setMinimumWidth(200)
         conn_layout.addWidget(self.port_combo)
         
         self.refresh_btn = QPushButton("Refresh")
@@ -518,6 +526,7 @@ class MainWindow(QMainWindow):
         conn_layout.addWidget(self.baud_combo)
         
         self.connect_btn = QPushButton("Connect")
+        self.connect_btn.setMinimumHeight(35)
         self.connect_btn.clicked.connect(self.toggle_connection)
         conn_layout.addWidget(self.connect_btn)
         
@@ -526,34 +535,19 @@ class MainWindow(QMainWindow):
         conn_group.setLayout(conn_layout)
         main_layout.addWidget(conn_group)
         
-        # MCU Status panels
-        mcu_layout = QHBoxLayout()
-        
-        self.mcu_420_widget = MCUWidget("Controller 420 (4-20mA)", RS485_ADDR_CONTROLLER_420)
-        mcu_layout.addWidget(self.mcu_420_widget)
-        
-        self.mcu_dio_widget = MCUWidget("Controller DIO (Inputs)", RS485_ADDR_CONTROLLER_DIO)
-        mcu_layout.addWidget(self.mcu_dio_widget)
-        
-        self.mcu_out_widget = MCUWidget("Controller OUT (Outputs)", RS485_ADDR_CONTROLLER_OUT)
-        mcu_layout.addWidget(self.mcu_out_widget)
+        # MCU Status panel - Only Controller OUT
+        self.mcu_out_widget = MCUWidget("Controller OUT (Digital Outputs - 56 Channels)", RS485_ADDR_CONTROLLER_OUT)
+        main_layout.addWidget(self.mcu_out_widget)
         
         self.mcu_widgets = {
-            RS485_ADDR_CONTROLLER_420: self.mcu_420_widget,
-            RS485_ADDR_CONTROLLER_DIO: self.mcu_dio_widget,
             RS485_ADDR_CONTROLLER_OUT: self.mcu_out_widget
         }
         
-        main_layout.addLayout(mcu_layout)
-        
-        # Analog input display (will be enabled when connected)
-        self.analog_widget = None
-        
-        # Digital I/O control (will be enabled when connected)
-        self.dio_widget = None
+        # Digital Output control (will be enabled when connected)
+        self.do_widget = None
         
         # Status bar
-        self.statusBar().showMessage("Ready")
+        self.statusBar().showMessage("Ready - Connect to RS485 to start")
         
         # Menu bar
         menubar = self.menuBar()
@@ -568,7 +562,7 @@ class MainWindow(QMainWindow):
         # Tools menu
         tools_menu = menubar.addMenu("Tools")
         
-        scan_action = QAction("Scan Devices", self)
+        scan_action = QAction("Scan Device", self)
         scan_action.triggered.connect(self.scan_devices)
         tools_menu.addAction(scan_action)
         
@@ -610,21 +604,17 @@ class MainWindow(QMainWindow):
             
             if self.protocol.connect():
                 self.connect_btn.setText("Disconnect")
+                self.connect_btn.setStyleSheet("background-color: #ff6b6b; font-weight: bold;")
                 self.port_combo.setEnabled(False)
                 self.baud_combo.setEnabled(False)
                 self.refresh_btn.setEnabled(False)
                 
-                self.statusBar().showMessage(f"Connected to {port}")
+                self.statusBar().showMessage(f"Connected to {port} @ {baudrate} baud")
                 
-                # Add Analog Input widget
-                if self.analog_widget is None:
-                    self.analog_widget = AnalogInputWidget(self.protocol)
-                    self.centralWidget().layout().addWidget(self.analog_widget)
-                
-                # Add Digital I/O widget
-                if self.dio_widget is None:
-                    self.dio_widget = DigitalIOWidget(self.protocol)
-                    self.centralWidget().layout().addWidget(self.dio_widget)
+                # Add Digital Output widget only
+                if self.do_widget is None:
+                    self.do_widget = DigitalOutputWidget(self.protocol)
+                    self.centralWidget().layout().addWidget(self.do_widget)
                 
                 # Start health monitoring
                 self.start_health_monitoring()
@@ -633,7 +623,7 @@ class MainWindow(QMainWindow):
                 QTimer.singleShot(500, self.scan_devices)
                 
             else:
-                QMessageBox.critical(self, "Error", "Failed to connect")
+                QMessageBox.critical(self, "Error", "Failed to connect to serial port")
                 self.protocol = None
                 
         except Exception as e:
@@ -650,11 +640,12 @@ class MainWindow(QMainWindow):
             self.protocol = None
             
         self.connect_btn.setText("Connect")
+        self.connect_btn.setStyleSheet("")
         self.port_combo.setEnabled(True)
         self.baud_combo.setEnabled(True)
         self.refresh_btn.setEnabled(True)
         
-        # Update MCU widgets
+        # Update MCU widget
         for widget in self.mcu_widgets.values():
             widget.update_connection(False)
         
@@ -697,30 +688,37 @@ class MainWindow(QMainWindow):
             self.mcu_widgets[mcu_addr].update_connection(False)
     
     def scan_devices(self):
-        """Scan for connected devices"""
+        """Scan for Controller OUT device"""
         if not self.protocol or not self.protocol.is_connected():
-            QMessageBox.warning(self, "Error", "Not connected")
+            QMessageBox.warning(self, "Error", "Not connected to RS485")
             return
         
-        self.statusBar().showMessage("Scanning devices...")
+        self.statusBar().showMessage("Scanning for Controller OUT...")
         QApplication.processEvents()
         
-        found_count = 0
-        
-        for mcu_addr, widget in self.mcu_widgets.items():
-            # Ping device
-            if self.protocol.ping(mcu_addr):
-                widget.update_connection(True)
-                found_count += 1
-                
-                # Get version
-                version = self.protocol.get_version(mcu_addr)
-                if version:
-                    widget.update_version(version)
-            else:
-                widget.update_connection(False)
-        
-        self.statusBar().showMessage(f"Scan complete. Found {found_count} device(s)")
+        # Ping Controller OUT device
+        if self.protocol.ping(RS485_ADDR_CONTROLLER_OUT):
+            self.mcu_out_widget.update_connection(True)
+            
+            # Get version
+            version = self.protocol.get_version(RS485_ADDR_CONTROLLER_OUT)
+            if version:
+                self.mcu_out_widget.update_version(version)
+            
+            self.statusBar().showMessage("✓ Controller OUT found and connected!")
+            QMessageBox.information(self, "Scan Complete", 
+                                   "Controller OUT (0x03) detected and ready!\n\n"
+                                   "You can now control the 56 digital outputs.")
+        else:
+            self.mcu_out_widget.update_connection(False)
+            self.statusBar().showMessage("✗ Controller OUT not found")
+            QMessageBox.warning(self, "Scan Complete", 
+                               "Controller OUT (0x03) not detected.\n\n"
+                               "Please check:\n"
+                               "- RS485 connection\n"
+                               "- Controller power\n"
+                               "- Baud rate settings\n"
+                               "- Controller address (should be 0x03)")
     
     def show_about(self):
         """Show about dialog"""
