@@ -26,7 +26,7 @@ def build_executable():
     # PyInstaller arguments
     args = [
         'main_gui.py',                  # Main script
-        '--name=PLC_Controller_GUI',    # Executable name
+        '--name=DigitalIN_Controller',  # Executable name
         '--onefile',                    # Single file
         '--windowed',                   # No console window
         '--clean',                      # Clean cache
@@ -43,7 +43,7 @@ def build_executable():
         print("\n" + "="*60)
         print("Build completed successfully!")
         print("="*60)
-        print(f"\nExecutable location: dist/PLC_Controller_GUI.exe")
+        print(f"\nExecutable location: dist/DigitalIN_Controller.exe")
         print("\nYou can distribute the executable to users.")
         print("No Python installation required on target machine.")
         

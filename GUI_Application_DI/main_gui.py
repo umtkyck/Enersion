@@ -143,18 +143,18 @@ class MCUWidget(QGroupBox):
             self.status_indicator.setStyleSheet("color: green; font-weight: bold;")
             
             if health_data:
-        health = health_data.get('health', 0)
+                health = health_data.get('health', 0)
                 self.health_label.setText(f"{health}%")
-        
-        if health >= 80:
+                
+                if health >= 80:
                     self.health_label.setStyleSheet("color: green; font-weight: bold;")
-        elif health >= 50:
+                elif health >= 50:
                     self.health_label.setStyleSheet("color: orange; font-weight: bold;")
-        else:
+                else:
                     self.health_label.setStyleSheet("color: red; font-weight: bold;")
                 
-        status = health_data.get('status')
-        if status:
+                status = health_data.get('status')
+                if status:
                     self.stats_label.setText(
                         f"TX: {status.get('tx_packets', 0)} | "
                         f"RX: {status.get('rx_packets', 0)} | "
