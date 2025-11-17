@@ -13,34 +13,96 @@
 static DigitalInput_t digitalInputs[NUM_DIGITAL_INPUTS];
 static uint8_t inputStates[NUM_DIGITAL_INPUTS];
 
-/* Input pin mapping based on main.c GPIO configuration */
+/* Input pin mapping - MUST match main.h MCU_DI0-DI55 definitions exactly */
 static const struct {
     GPIO_TypeDef* port;
     uint16_t pin;
 } inputPinMap[] = {
-    /* Port F inputs */
-    {GPIOF, GPIO_PIN_12}, {GPIOF, GPIO_PIN_13}, {GPIOF, GPIO_PIN_14}, {GPIOF, GPIO_PIN_15},
-    /* Port G inputs */
-    {GPIOG, GPIO_PIN_0}, {GPIOG, GPIO_PIN_1}, {GPIOG, GPIO_PIN_2}, {GPIOG, GPIO_PIN_3},
-    {GPIOG, GPIO_PIN_4}, {GPIOG, GPIO_PIN_5}, {GPIOG, GPIO_PIN_6}, {GPIOG, GPIO_PIN_7},
-    {GPIOG, GPIO_PIN_8}, {GPIOG, GPIO_PIN_9}, {GPIOG, GPIO_PIN_10}, {GPIOG, GPIO_PIN_11},
-    {GPIOG, GPIO_PIN_12}, {GPIOG, GPIO_PIN_13}, {GPIOG, GPIO_PIN_14}, {GPIOG, GPIO_PIN_15},
-    /* Port E inputs */
-    {GPIOE, GPIO_PIN_7}, {GPIOE, GPIO_PIN_8}, {GPIOE, GPIO_PIN_9}, {GPIOE, GPIO_PIN_10},
-    {GPIOE, GPIO_PIN_11}, {GPIOE, GPIO_PIN_12}, {GPIOE, GPIO_PIN_13}, {GPIOE, GPIO_PIN_14},
-    {GPIOE, GPIO_PIN_15},
-    /* Port B inputs */
-    {GPIOB, GPIO_PIN_10}, {GPIOB, GPIO_PIN_11}, {GPIOB, GPIO_PIN_12}, {GPIOB, GPIO_PIN_13},
-    {GPIOB, GPIO_PIN_3}, {GPIOB, GPIO_PIN_4},
-    /* Port D inputs */
-    {GPIOD, GPIO_PIN_8}, {GPIOD, GPIO_PIN_9}, {GPIOD, GPIO_PIN_10}, {GPIOD, GPIO_PIN_11},
-    {GPIOD, GPIO_PIN_12}, {GPIOD, GPIO_PIN_13}, {GPIOD, GPIO_PIN_14}, {GPIOD, GPIO_PIN_15},
-    {GPIOD, GPIO_PIN_0}, {GPIOD, GPIO_PIN_3}, {GPIOD, GPIO_PIN_7},
-    /* Port C inputs */
-    {GPIOC, GPIO_PIN_6}, {GPIOC, GPIO_PIN_7}, {GPIOC, GPIO_PIN_8}, {GPIOC, GPIO_PIN_9},
-    {GPIOC, GPIO_PIN_10}, {GPIOC, GPIO_PIN_11}, {GPIOC, GPIO_PIN_12},
-    /* Port A inputs */
-    {GPIOA, GPIO_PIN_8}, {GPIOA, GPIO_PIN_9}, {GPIOA, GPIO_PIN_15}
+    /* DI0-DI3: Port F (PF12-PF15) */
+    {GPIOF, GPIO_PIN_12}, // DI0  = PF12
+    {GPIOF, GPIO_PIN_13}, // DI1  = PF13
+    {GPIOF, GPIO_PIN_14}, // DI2  = PF14
+    {GPIOF, GPIO_PIN_15}, // DI3  = PF15
+    
+    /* DI4-DI5: Port G (PG0-PG1) */
+    {GPIOG, GPIO_PIN_0},  // DI4  = PG0
+    {GPIOG, GPIO_PIN_1},  // DI5  = PG1
+    
+    /* DI6-DI14: Port E (PE7-PE15) */
+    {GPIOE, GPIO_PIN_7},  // DI6  = PE7
+    {GPIOE, GPIO_PIN_8},  // DI7  = PE8
+    {GPIOE, GPIO_PIN_9},  // DI8  = PE9
+    {GPIOE, GPIO_PIN_10}, // DI9  = PE10
+    {GPIOE, GPIO_PIN_11}, // DI10 = PE11
+    {GPIOE, GPIO_PIN_12}, // DI11 = PE12
+    {GPIOE, GPIO_PIN_13}, // DI12 = PE13
+    {GPIOE, GPIO_PIN_14}, // DI13 = PE14
+    {GPIOE, GPIO_PIN_15}, // DI14 = PE15
+    
+    /* DI15-DI18: Port B (PB10-PB13) */
+    {GPIOB, GPIO_PIN_10}, // DI15 = PB10
+    {GPIOB, GPIO_PIN_11}, // DI16 = PB11
+    {GPIOB, GPIO_PIN_12}, // DI17 = PB12
+    {GPIOB, GPIO_PIN_13}, // DI18 = PB13
+    
+    /* DI19-DI26: Port D (PD8-PD15) */
+    {GPIOD, GPIO_PIN_8},  // DI19 = PD8
+    {GPIOD, GPIO_PIN_9},  // DI20 = PD9
+    {GPIOD, GPIO_PIN_10}, // DI21 = PD10
+    {GPIOD, GPIO_PIN_11}, // DI22 = PD11
+    {GPIOD, GPIO_PIN_12}, // DI23 = PD12
+    {GPIOD, GPIO_PIN_13}, // DI24 = PD13
+    {GPIOD, GPIO_PIN_14}, // DI25 = PD14
+    {GPIOD, GPIO_PIN_15}, // DI26 = PD15
+    
+    /* DI27-DI33: Port G (PG2-PG8) */
+    {GPIOG, GPIO_PIN_2},  // DI27 = PG2
+    {GPIOG, GPIO_PIN_3},  // DI28 = PG3
+    {GPIOG, GPIO_PIN_4},  // DI29 = PG4
+    {GPIOG, GPIO_PIN_5},  // DI30 = PG5
+    {GPIOG, GPIO_PIN_6},  // DI31 = PG6
+    {GPIOG, GPIO_PIN_7},  // DI32 = PG7
+    {GPIOG, GPIO_PIN_8},  // DI33 = PG8
+    
+    /* DI34-DI37: Port C (PC6-PC9) */
+    {GPIOC, GPIO_PIN_6},  // DI34 = PC6
+    {GPIOC, GPIO_PIN_7},  // DI35 = PC7
+    {GPIOC, GPIO_PIN_8},  // DI36 = PC8
+    {GPIOC, GPIO_PIN_9},  // DI37 = PC9
+    
+    /* DI38-DI39: Port A (PA8-PA9) */
+    {GPIOA, GPIO_PIN_8},  // DI38 = PA8
+    {GPIOA, GPIO_PIN_9},  // DI39 = PA9
+    
+    /* DI40: Port A (PA15) */
+    {GPIOA, GPIO_PIN_15}, // DI40 = PA15
+    
+    /* DI41-DI43: Port C (PC10-PC12) */
+    {GPIOC, GPIO_PIN_10}, // DI41 = PC10
+    {GPIOC, GPIO_PIN_11}, // DI42 = PC11
+    {GPIOC, GPIO_PIN_12}, // DI43 = PC12
+    
+    /* DI44: Port D (PD0) */
+    {GPIOD, GPIO_PIN_0},  // DI44 = PD0
+    
+    /* DI45: Port D (PD3) */
+    {GPIOD, GPIO_PIN_3},  // DI45 = PD3
+    
+    /* DI46: Port D (PD7) */
+    {GPIOD, GPIO_PIN_7},  // DI46 = PD7
+    
+    /* DI47-DI53: Port G (PG9-PG15) */
+    {GPIOG, GPIO_PIN_9},  // DI47 = PG9
+    {GPIOG, GPIO_PIN_10}, // DI48 = PG10
+    {GPIOG, GPIO_PIN_11}, // DI49 = PG11
+    {GPIOG, GPIO_PIN_12}, // DI50 = PG12
+    {GPIOG, GPIO_PIN_13}, // DI51 = PG13
+    {GPIOG, GPIO_PIN_14}, // DI52 = PG14
+    {GPIOG, GPIO_PIN_15}, // DI53 = PG15
+    
+    /* DI54-DI55: Port B (PB3-PB4) */
+    {GPIOB, GPIO_PIN_3},  // DI54 = PB3
+    {GPIOB, GPIO_PIN_4}   // DI55 = PB4
 };
 
 #define NUM_INPUT_PINS (sizeof(inputPinMap) / sizeof(inputPinMap[0]))

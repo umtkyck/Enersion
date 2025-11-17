@@ -51,7 +51,7 @@ void RS485_Init(uint8_t myAddr)
     status.health = 100;
     
     /* Initialize RS485 direction pin (PD4) to RX mode (LOW) */
-    HAL_GPIO_WritePin(RS485_COM_OUT_GPIO_Port, RS485_COM_OUT_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(RS485_DI_COM_GPIO_Port, RS485_DI_COM_Pin, GPIO_PIN_RESET);
     
     /* Register default command handlers */
     RS485_RegisterCommandHandler(CMD_PING, RS485_HandlePing);
@@ -140,8 +140,8 @@ HAL_StatusTypeDef RS485_SendPacket(uint8_t destAddr, RS485_Command_t cmd,
     
     /* Enable RS485 transmitter (PD4 = HIGH) */
     DEBUG_INFO("Setting PD4 HIGH (TX mode)");
-    HAL_GPIO_WritePin(RS485_COM_OUT_GPIO_Port, RS485_COM_OUT_Pin, GPIO_PIN_SET);
-    GPIO_PinState pin_state = HAL_GPIO_ReadPin(RS485_COM_OUT_GPIO_Port, RS485_COM_OUT_Pin);
+    HAL_GPIO_WritePin(RS485_DI_COM_GPIO_Port, RS485_DI_COM_Pin, GPIO_PIN_SET);
+    GPIO_PinState pin_state = HAL_GPIO_ReadPin(RS485_DI_COM_GPIO_Port, RS485_DI_COM_Pin);
     DEBUG_INFO("PD4 state after SET: %d", pin_state);
     
     /* Small delay for transceiver switching - busy wait instead of HAL_Delay */
@@ -165,8 +165,8 @@ HAL_StatusTypeDef RS485_SendPacket(uint8_t destAddr, RS485_Command_t cmd,
     
     /* Switch back to receive mode (PD4 = LOW) */
     DEBUG_INFO("Setting PD4 LOW (RX mode)");
-    HAL_GPIO_WritePin(RS485_COM_OUT_GPIO_Port, RS485_COM_OUT_Pin, GPIO_PIN_RESET);
-    pin_state = HAL_GPIO_ReadPin(RS485_COM_OUT_GPIO_Port, RS485_COM_OUT_Pin);
+    HAL_GPIO_WritePin(RS485_DI_COM_GPIO_Port, RS485_DI_COM_Pin, GPIO_PIN_RESET);
+    pin_state = HAL_GPIO_ReadPin(RS485_DI_COM_GPIO_Port, RS485_DI_COM_Pin);
     DEBUG_INFO("PD4 state after RESET: %d", pin_state);
     
     /* Re-enable UART RX interrupt */
