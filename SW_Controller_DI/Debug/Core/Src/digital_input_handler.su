@@ -1,0 +1,5 @@
+../Core/Src/digital_input_handler.c:114:6:DigitalInput_Init	16	static
+../Core/Src/digital_input_handler.c:135:6:DigitalInput_Update	24	static
+../Core/Src/digital_input_handler.c:166:9:DigitalInput_Read	16	static
+../Core/Src/digital_input_handler.c:180:6:DigitalInput_GetAll	24	static
+../Core/Src/digital_input_handler.c:203:9:DigitalInput_HasChanged	16	static

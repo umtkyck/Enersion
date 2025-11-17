@@ -118,12 +118,6 @@ int main(void)
   /* Initialize hierarchical layers */
   Debug_Init();
   
-  /* Print startup banner */
-  Version_GetString(versionString, VERSION_STRING_SIZE);
-  DEBUG_INFO("===========================================");
-  DEBUG_INFO("  %s", versionString);
-  DEBUG_INFO("===========================================");
-  
   /* Initialize digital input handler */
   DigitalInput_Init();
   
@@ -132,9 +126,6 @@ int main(void)
   
   /* Register digital input command handler */
   RS485_RegisterCommandHandler(CMD_READ_DI, HandleReadDI);
-  
-  DEBUG_INFO("System initialization complete");
-  DEBUG_INFO("Entering main loop...");
   
   heartbeatTimer = HAL_GetTick();
   statusLedTimer = HAL_GetTick();
@@ -168,10 +159,6 @@ int main(void)
     /* Periodic heartbeat logging (every 10 seconds) */
     if (HAL_GetTick() - heartbeatTimer >= 10000) {
       heartbeatTimer = HAL_GetTick();
-      RS485_Status_t* status = RS485_GetStatus();
-      DEBUG_INFO("Heartbeat: Uptime=%lu RX=%lu TX=%lu Err=%lu Health=%d%%", 
-                 status->uptime, status->rxPacketCount, 
-                 status->txPacketCount, status->errorCount, status->health);
     }
     
     /* Small delay to prevent CPU hogging */
@@ -431,7 +418,7 @@ static void MX_USART2_UART_Init(void)
   huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
   huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_RS485Ex_Init(&huart2, UART_DE_POLARITY_HIGH, 0, 0) != HAL_OK)
+  if (HAL_UART_Init(&huart2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -443,12 +430,12 @@ static void MX_USART2_UART_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_EnableFifoMode(&huart2) != HAL_OK)
+  if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN USART2_Init 2 */
-  DEBUG_INFO("UART2 (RS485) initialized with FIFO enabled");
+  
   /* USER CODE END USART2_Init 2 */
 
 }
@@ -476,70 +463,70 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1|GPIO_PIN_2, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, LED_RUN_DIO_Pin|LED_ERR_DIO_Pin|RS485_DI_COM_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PF12 PF13 PF14 PF15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+  /*Configure GPIO pins : MCU_DI0_Pin MCU_DI1_Pin MCU_DI2_Pin MCU_DI3_Pin */
+  GPIO_InitStruct.Pin = MCU_DI0_Pin|MCU_DI1_Pin|MCU_DI2_Pin|MCU_DI3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PG0 PG1 PG2 PG3
-                           PG4 PG5 PG6 PG7
-                           PG8 PG9 PG10 PG11
-                           PG12 PG13 PG14 PG15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
-                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11
-                          |GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+  /*Configure GPIO pins : MCU_DI4_Pin MCU_DI5_Pin MCU_DI27_Pin MCU_DI28_Pin
+                           MCU_DI29_Pin MCU_DI30_Pin MCU_DI31_Pin MCU_DI32_Pin
+                           MCU_DI33_Pin MCU_DI47_Pin MCU_DI48_Pin MCU_DI49_Pin
+                           MCU_DI50_Pin MCU_DI51_Pin MCU_DI52_Pin MCU_DI53_Pin */
+  GPIO_InitStruct.Pin = MCU_DI4_Pin|MCU_DI5_Pin|MCU_DI27_Pin|MCU_DI28_Pin
+                          |MCU_DI29_Pin|MCU_DI30_Pin|MCU_DI31_Pin|MCU_DI32_Pin
+                          |MCU_DI33_Pin|MCU_DI47_Pin|MCU_DI48_Pin|MCU_DI49_Pin
+                          |MCU_DI50_Pin|MCU_DI51_Pin|MCU_DI52_Pin|MCU_DI53_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PE7 PE8 PE9 PE10
-                           PE11 PE12 PE13 PE14
-                           PE15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
-                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
-                          |GPIO_PIN_15;
+  /*Configure GPIO pins : MCU_DI6_Pin MCU_DI7_Pin MCU_DI8_Pin MCU_DI9_Pin
+                           MCU_DI10_Pin MCU_DI11_Pin MCU_DI12_Pin MCU_DI13_Pin
+                           MCU_DI14_Pin */
+  GPIO_InitStruct.Pin = MCU_DI6_Pin|MCU_DI7_Pin|MCU_DI8_Pin|MCU_DI9_Pin
+                          |MCU_DI10_Pin|MCU_DI11_Pin|MCU_DI12_Pin|MCU_DI13_Pin
+                          |MCU_DI14_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB10 PB11 PB12 PB13
-                           PB3 PB4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
-                          |GPIO_PIN_3|GPIO_PIN_4;
+  /*Configure GPIO pins : MCU_DI15_Pin MCU_DI16_Pin MCU_DI17_Pin MCU_DI18_Pin
+                           MCU_DI54_Pin MCU_DI55_Pin */
+  GPIO_InitStruct.Pin = MCU_DI15_Pin|MCU_DI16_Pin|MCU_DI17_Pin|MCU_DI18_Pin
+                          |MCU_DI54_Pin|MCU_DI55_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PD8 PD9 PD10 PD11
-                           PD12 PD13 PD14 PD15
-                           PD0 PD3 PD7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11
-                          |GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15
-                          |GPIO_PIN_0|GPIO_PIN_3|GPIO_PIN_7;
+  /*Configure GPIO pins : MCU_DI19_Pin MCU_DI20_Pin MCU_DI21_Pin MCU_DI22_Pin
+                           MCU_DI23_Pin MCU_DI24_Pin MCU_DI25_Pin MCU_DI26_Pin
+                           MCU_DI44_Pin MCU_DI45_Pin MCU_DI46_Pin */
+  GPIO_InitStruct.Pin = MCU_DI19_Pin|MCU_DI20_Pin|MCU_DI21_Pin|MCU_DI22_Pin
+                          |MCU_DI23_Pin|MCU_DI24_Pin|MCU_DI25_Pin|MCU_DI26_Pin
+                          |MCU_DI44_Pin|MCU_DI45_Pin|MCU_DI46_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PC6 PC7 PC8 PC9
-                           PC10 PC11 PC12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9
-                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12;
+  /*Configure GPIO pins : MCU_DI34_Pin MCU_DI35_Pin MCU_DI36_Pin MCU_DI37_Pin
+                           MCU_DI41_Pin MCU_DI42_Pin MCU_DI43_Pin */
+  GPIO_InitStruct.Pin = MCU_DI34_Pin|MCU_DI35_Pin|MCU_DI36_Pin|MCU_DI37_Pin
+                          |MCU_DI41_Pin|MCU_DI42_Pin|MCU_DI43_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA8 PA9 PA15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_15;
+  /*Configure GPIO pins : MCU_DI38_Pin MCU_DI39_Pin MCU_DI40_Pin */
+  GPIO_InitStruct.Pin = MCU_DI38_Pin|MCU_DI39_Pin|MCU_DI40_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PD1 PD2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2;
+  /*Configure GPIO pins : LED_RUN_DIO_Pin LED_ERR_DIO_Pin RS485_DI_COM_Pin */
+  GPIO_InitStruct.Pin = LED_RUN_DIO_Pin|LED_ERR_DIO_Pin|RS485_DI_COM_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -563,8 +550,6 @@ void HandleReadDI(const RS485_Packet_t* packet)
     DigitalInput_GetAll(inputData, sizeof(inputData));
     
     RS485_SendResponse(packet->srcAddr, CMD_DI_RESPONSE, inputData, sizeof(inputData));
-    
-    DEBUG_DEBUG("Digital inputs read and sent (56 channels)");
 }
 
 /* USER CODE END 4 */

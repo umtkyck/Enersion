@@ -1,6 +1,6 @@
-../Core/Src/digital_output_handler.c:54:6:DigitalOutput_Init	16	static
-../Core/Src/digital_output_handler.c:78:6:DigitalOutput_Set	24	static
-../Core/Src/digital_output_handler.c:97:6:DigitalOutput_SetAll	24	static
-../Core/Src/digital_output_handler.c:119:9:DigitalOutput_Get	16	static
-../Core/Src/digital_output_handler.c:133:6:DigitalOutput_GetAll	24	static
-../Core/Src/digital_output_handler.c:156:6:DigitalOutput_Toggle	16	static
+../Core/Src/digital_output_handler.c:108:6:DigitalOutput_Init	16	static
+../Core/Src/digital_output_handler.c:132:6:DigitalOutput_Set	24	static
+../Core/Src/digital_output_handler.c:151:6:DigitalOutput_SetAll	24	static
+../Core/Src/digital_output_handler.c:173:9:DigitalOutput_Get	16	static
+../Core/Src/digital_output_handler.c:187:6:DigitalOutput_GetAll	24	static
+../Core/Src/digital_output_handler.c:210:6:DigitalOutput_Toggle	16	static

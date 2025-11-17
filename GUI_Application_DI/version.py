@@ -12,14 +12,14 @@ All code and comments in English language
 
 # Application Version
 APP_VERSION_MAJOR = 1
-APP_VERSION_MINOR = 0
+APP_VERSION_MINOR = 1
 APP_VERSION_PATCH = 0
-APP_BUILD_NUMBER = 1
+APP_BUILD_NUMBER = 2
 
 # Application Information
-APP_NAME = "PLC Controller GUI"
+APP_NAME = "Digital IN Controller"
 APP_COMPANY = "Enersion"
-APP_DESCRIPTION = "RS485 PLC Controller Interface"
+APP_DESCRIPTION = "RS485 Digital Input Monitor (56 Channels)"
 
 def get_version_string():
     """

@@ -3,8 +3,8 @@
 ../Core/Src/main.c:230:13:MX_FDCAN1_Init	2
 ../Core/Src/main.c:283:13:MX_USART1_UART_Init	5
 ../Core/Src/main.c:331:13:MX_USART2_UART_Init	5
-../Core/Src/main.c:380:13:MX_GPIO_Init	1
-../Core/Src/main.c:524:6:HandleWriteDO	1
-../Core/Src/main.c:540:6:HandleReadDO	1
-../Core/Src/main.c:554:6:MPU_Config	1
-../Core/Src/main.c:585:6:Error_Handler	1
+../Core/Src/main.c:379:13:MX_GPIO_Init	1
+../Core/Src/main.c:523:6:HandleWriteDO	1
+../Core/Src/main.c:539:6:HandleReadDO	1
+../Core/Src/main.c:553:6:MPU_Config	1
+../Core/Src/main.c:584:6:Error_Handler	1

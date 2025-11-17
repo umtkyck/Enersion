@@ -61,8 +61,6 @@ void RS485_Init(uint8_t myAddr)
     
     /* Start receiving in interrupt mode */
     HAL_UART_Receive_IT(&huart2, rxBuffer, 1);
-    
-    DEBUG_INFO("RS485 Protocol initialized, Address: 0x%02X", myAddress);
 }
 
 /**
@@ -128,10 +126,6 @@ HAL_StatusTypeDef RS485_SendPacket(uint8_t destAddr, RS485_Command_t cmd,
     txBuffer[5 + length + 1] = (packet.checksum >> 8) & 0xFF; // CRC high byte
     txBuffer[5 + length + 2] = RS485_END_BYTE;
     
-    DEBUG_INFO("TX Buffer (%d bytes): %02X %02X %02X %02X %02X %02X %02X %02X", 
-               packetSize, txBuffer[0], txBuffer[1], txBuffer[2], txBuffer[3],
-               txBuffer[4], txBuffer[5], txBuffer[6], txBuffer[7]);
-    
     /* Set TX in progress flag */
     txInProgress = 1;
     
@@ -139,10 +133,7 @@ HAL_StatusTypeDef RS485_SendPacket(uint8_t destAddr, RS485_Command_t cmd,
     __HAL_UART_DISABLE_IT(&huart2, UART_IT_RXNE);
     
     /* Enable RS485 transmitter (PD4 = HIGH) */
-    DEBUG_INFO("Setting PD4 HIGH (TX mode)");
     HAL_GPIO_WritePin(RS485_DI_COM_GPIO_Port, RS485_DI_COM_Pin, GPIO_PIN_SET);
-    GPIO_PinState pin_state = HAL_GPIO_ReadPin(RS485_DI_COM_GPIO_Port, RS485_DI_COM_Pin);
-    DEBUG_INFO("PD4 state after SET: %d", pin_state);
     
     /* Small delay for transceiver switching - busy wait instead of HAL_Delay */
     /* At 480MHz, this gives ~1ms delay */
@@ -156,7 +147,6 @@ HAL_StatusTypeDef RS485_SendPacket(uint8_t destAddr, RS485_Command_t cmd,
     
     /* Wait for transmission complete */
     while(__HAL_UART_GET_FLAG(&huart2, UART_FLAG_TC) == RESET);
-    DEBUG_INFO("UART TX complete");
     
     /* Small delay before switching back - busy wait instead of HAL_Delay */
     for(volatile uint32_t i = 0; i < 240000; i++) {
@@ -164,10 +154,7 @@ HAL_StatusTypeDef RS485_SendPacket(uint8_t destAddr, RS485_Command_t cmd,
     }
     
     /* Switch back to receive mode (PD4 = LOW) */
-    DEBUG_INFO("Setting PD4 LOW (RX mode)");
     HAL_GPIO_WritePin(RS485_DI_COM_GPIO_Port, RS485_DI_COM_Pin, GPIO_PIN_RESET);
-    pin_state = HAL_GPIO_ReadPin(RS485_DI_COM_GPIO_Port, RS485_DI_COM_Pin);
-    DEBUG_INFO("PD4 state after RESET: %d", pin_state);
     
     /* Re-enable UART RX interrupt */
     __HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
@@ -177,10 +164,8 @@ HAL_StatusTypeDef RS485_SendPacket(uint8_t destAddr, RS485_Command_t cmd,
     
     if (result == HAL_OK) {
         status.txPacketCount++;
-        DEBUG_DEBUG("TX: Addr=0x%02X Cmd=0x%02X Len=%d", destAddr, cmd, length);
     } else {
         status.errorCount++;
-        DEBUG_ERROR("TX Failed: Addr=0x%02X Cmd=0x%02X", destAddr, cmd);
     }
     
     return result;
@@ -277,10 +262,6 @@ static void RS485_ProcessPacket(const uint8_t* buffer)
     /* CRC is at position 5 + length (2 bytes, little endian) */
     uint16_t receivedCRC = buffer[5 + length] | (buffer[5 + length + 1] << 8);
     
-    DEBUG_INFO("Parsing: dest=0x%02X src=0x%02X cmd=0x%02X len=%d", 
-               destAddr, srcAddr, command, length);
-    DEBUG_INFO("Received CRC: 0x%04X", receivedCRC);
-    
     /* Verify checksum */
     uint8_t crcBuffer[4 + length];
     crcBuffer[0] = destAddr;
@@ -292,26 +273,19 @@ static void RS485_ProcessPacket(const uint8_t* buffer)
     }
     
     uint16_t calculatedCRC = RS485_CalculateCRC(crcBuffer, 4 + length);
-    DEBUG_INFO("Calculated CRC: 0x%04X", calculatedCRC);
     
     if (calculatedCRC != receivedCRC) {
-        DEBUG_ERROR("CRC Error: Expected 0x%04X, Got 0x%04X", 
-                   calculatedCRC, receivedCRC);
         status.errorCount++;
         RS485_SendError(srcAddr, RS485_ERR_INVALID_CHECKSUM);
         return;
     }
     
-    DEBUG_INFO("CRC OK!");
-    
     /* Check if packet is for us */
     if (destAddr != myAddress && destAddr != RS485_ADDR_BROADCAST) {
-        DEBUG_INFO("Not for us (dest=0x%02X, my=0x%02X)", destAddr, myAddress);
         return; // Not for us
     }
     
     status.rxPacketCount++;
-    DEBUG_INFO("RX: From=0x%02X Cmd=0x%02X Len=%d", srcAddr, command, length);
     
     /* Build packet structure for handler */
     RS485_Packet_t packet;
@@ -325,10 +299,8 @@ static void RS485_ProcessPacket(const uint8_t* buffer)
     
     /* Call command handler if registered */
     if (commandHandlers[command] != NULL) {
-        DEBUG_INFO("Calling handler for cmd=0x%02X", command);
         commandHandlers[command](&packet);
     } else {
-        DEBUG_WARNING("Unhandled command: 0x%02X", command);
         RS485_SendError(srcAddr, RS485_ERR_INVALID_COMMAND);
     }
 }
@@ -340,14 +312,7 @@ static void RS485_ProcessPacket(const uint8_t* buffer)
  */
 static void RS485_HandlePing(const RS485_Packet_t* packet)
 {
-    DEBUG_INFO("PING received from 0x%02X", packet->srcAddr);
-    DEBUG_INFO("Sending PING response...");
-    HAL_StatusTypeDef result = RS485_SendResponse(packet->srcAddr, CMD_PING_RESPONSE, NULL, 0);
-    if (result == HAL_OK) {
-        DEBUG_INFO("PING response sent OK!");
-    } else {
-        DEBUG_ERROR("PING response FAILED! Error=%d", result);
-    }
+    RS485_SendResponse(packet->srcAddr, CMD_PING_RESPONSE, NULL, 0);
 }
 
 /**
@@ -412,12 +377,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART2) {
         /* Ignore RX during TX (loopback prevention) */
         if (txInProgress) {
-            DEBUG_INFO("RX: 0x%02X (IGNORED - TX in progress)", rxBuffer[0]);
             HAL_UART_Receive_IT(&huart2, rxBuffer, 1);
             return;
         }
         
-        DEBUG_INFO("RX: 0x%02X", rxBuffer[0]);
         RS485_ProcessReceivedByte(rxBuffer[0]);
         HAL_UART_Receive_IT(&huart2, rxBuffer, 1);
     }
@@ -438,19 +401,16 @@ static void RS485_ProcessReceivedByte(uint8_t byte)
     /* Reset parser if no byte received for >500ms (inter-packet timeout) */
     uint32_t now = HAL_GetTick();
     if (now - lastByteTime > 500 && packetIndex > 0) {
-        DEBUG_INFO("Packet timeout! Resetting parser (was at index %d)", packetIndex);
         packetIndex = 0;
         expectedLength = 0;
     }
     lastByteTime = now;
     
     if (packetIndex == 0 && byte != RS485_START_BYTE) {
-        DEBUG_INFO("Waiting for START, got 0x%02X", byte);
         return; // Wait for start byte
     }
     
     packetBuffer[packetIndex++] = byte;
-    DEBUG_INFO("Packet[%d] = 0x%02X", packetIndex-1, byte);
     
     /* Get expected length from packet header */
     if (packetIndex == 5) {
@@ -459,13 +419,10 @@ static void RS485_ProcessReceivedByte(uint8_t byte)
     
     /* Check if we have complete packet */
     if (packetIndex >= 8 && packetIndex >= (5 + expectedLength + 3)) {
-        DEBUG_INFO("Packet complete! Index=%d, Expected=%d", packetIndex, 5 + expectedLength + 3);
         /* Verify end byte */
         if (packetBuffer[packetIndex - 1] == RS485_END_BYTE) {
-            DEBUG_INFO("Valid packet, processing...");
             RS485_ProcessPacket(packetBuffer);
         } else {
-            DEBUG_ERROR("Invalid end byte: 0x%02X", packetBuffer[packetIndex - 1]);
             status.errorCount++;
         }
         packetIndex = 0;
@@ -476,7 +433,6 @@ static void RS485_ProcessReceivedByte(uint8_t byte)
     if (packetIndex >= RS485_MAX_PACKET_SIZE) {
         packetIndex = 0;
         expectedLength = 0;
-        DEBUG_ERROR("RX buffer overflow");
         status.errorCount++;
     }
 }
