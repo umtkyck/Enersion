@@ -115,6 +115,12 @@ int main(void)
   /* Initialize hierarchical layers */
   Debug_Init();
   
+  /* Print startup banner */
+  Version_GetString(versionString, VERSION_STRING_SIZE);
+  DEBUG_INFO("===========================================");
+  DEBUG_INFO("  %s", versionString);
+  DEBUG_INFO("===========================================");
+  
   /* Initialize digital output handler */
   DigitalOutput_Init();
   
@@ -124,6 +130,9 @@ int main(void)
   /* Register command handlers */
   RS485_RegisterCommandHandler(CMD_WRITE_DO, HandleWriteDO);
   RS485_RegisterCommandHandler(CMD_READ_DO, HandleReadDO);
+  
+  DEBUG_INFO("System initialization complete");
+  DEBUG_INFO("Entering main loop...");
   
   heartbeatTimer = HAL_GetTick();
   statusLedTimer = HAL_GetTick();
@@ -150,6 +159,10 @@ int main(void)
     /* Periodic heartbeat logging (every 10 seconds) */
     if (HAL_GetTick() - heartbeatTimer >= 10000) {
       heartbeatTimer = HAL_GetTick();
+      RS485_Status_t* status = RS485_GetStatus();
+      DEBUG_INFO("Heartbeat: Uptime=%lu RX=%lu TX=%lu Err=%lu Health=%d%%", 
+                 status->uptime, status->rxPacketCount, 
+                 status->txPacketCount, status->errorCount, status->health);
     }
     
     /* Small delay to prevent CPU hogging */
