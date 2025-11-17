@@ -45,3 +45,4 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 Her byte geldiğinde LED yanıp sönmeli.
 
+

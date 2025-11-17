@@ -210,3 +210,4 @@ In STM32CubeMX (.ioc file):
 3. Open PuTTY @ COM8, 115200 baud
 4. Watch "HELLO WORLD" messages appear every 1 second! 🚀
 
+

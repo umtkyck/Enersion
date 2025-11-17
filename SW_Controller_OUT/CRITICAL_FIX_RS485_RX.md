@@ -110,3 +110,4 @@ PC sends PING → RS485 → MCU USART2 RX
 **Severity:** CRITICAL - RX completely non-functional
 **Status:** FIXED ✓
 
+
