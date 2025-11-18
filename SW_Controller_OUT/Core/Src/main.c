@@ -156,13 +156,10 @@ int main(void)
       HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_1); // Status LED
     }
     
-    /* Periodic heartbeat logging (every 10 seconds) */
+    /* Periodic heartbeat (verbose output disabled) */
     if (HAL_GetTick() - heartbeatTimer >= 10000) {
       heartbeatTimer = HAL_GetTick();
-      RS485_Status_t* status = RS485_GetStatus();
-      DEBUG_INFO("Heartbeat: Uptime=%lu RX=%lu TX=%lu Err=%lu Health=%d%%", 
-                 status->uptime, status->rxPacketCount, 
-                 status->txPacketCount, status->errorCount, status->health);
+      // Heartbeat silently tracked
     }
     
     /* Small delay to prevent CPU hogging */
@@ -361,7 +358,7 @@ static void MX_USART2_UART_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_EnableFifoMode(&huart2) != HAL_OK)
+  if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
   {
     Error_Handler();
   }

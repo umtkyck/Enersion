@@ -619,8 +619,8 @@ class MainWindow(QMainWindow):
                 # Start health monitoring
                 self.start_health_monitoring()
                 
-                # Initial device scan
-                QTimer.singleShot(500, self.scan_devices)
+                # Initial device scan - wait longer for MCU to be ready
+                QTimer.singleShot(1500, self.scan_devices)
                 
             else:
                 QMessageBox.critical(self, "Error", "Failed to connect to serial port")
@@ -735,16 +735,22 @@ class MainWindow(QMainWindow):
 
 def main():
     """Main application entry point"""
-    app = QApplication(sys.argv)
-    
-    # Set application style
-    app.setStyle('Fusion')
-    
-    # Create and show main window
-    window = MainWindow()
-    window.show()
-    
-    sys.exit(app.exec_())
+    try:
+        app = QApplication(sys.argv)
+        
+        # Set application style
+        app.setStyle('Fusion')
+        
+        # Create and show main window
+        window = MainWindow()
+        window.show()
+        
+        sys.exit(app.exec_())
+    except Exception as e:
+        print(f"Application error: {e}")
+        import traceback
+        traceback.print_exc()
+        input("Press Enter to exit...")
 
 if __name__ == '__main__':
     main()
