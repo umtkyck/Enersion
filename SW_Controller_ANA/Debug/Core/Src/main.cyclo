@@ -1,0 +1,14 @@
+../Core/Src/main.c:91:5:main	4
+../Core/Src/main.c:198:6:SystemClock_Config	4
+../Core/Src/main.c:257:13:MX_FDCAN1_Init	2
+../Core/Src/main.c:310:13:MX_SPI1_Init	2
+../Core/Src/main.c:358:13:MX_SPI4_Init	2
+../Core/Src/main.c:406:13:MX_USART1_UART_Init	5
+../Core/Src/main.c:454:13:MX_USART2_UART_Init	5
+../Core/Src/main.c:502:13:MX_GPIO_Init	1
+../Core/Src/main.c:539:6:HandleRead420mA	3
+../Core/Src/main.c:566:6:HandleReadVoltage	2
+../Core/Src/main.c:590:6:HandleReadNTC	2
+../Core/Src/main.c:614:6:HandleReadAllAnalog	4
+../Core/Src/main.c:653:6:MPU_Config	1
+../Core/Src/main.c:684:6:Error_Handler	1

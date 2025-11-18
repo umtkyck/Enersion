@@ -1,0 +1,2 @@
+../Core/Src/version.c:18:6:Version_GetString	1
+../Core/Src/version.c:35:10:Version_GetFirmwareVersion	1

@@ -1,0 +1,18 @@
+# PLC Controller GUI Application
+# Python 3.8+
+
+# GUI Framework
+PyQt5==5.15.9
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.11.0
+
+# Serial Communication
+pyserial==3.5
+
+# For executable packaging
+pyinstaller==5.13.2
+
+# Additional utilities
+numpy==1.24.3
+
+

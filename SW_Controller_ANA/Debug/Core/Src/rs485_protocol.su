@@ -1,0 +1,15 @@
+../Core/Src/rs485_protocol.c:44:6:RS485_Init	16	static
+../Core/Src/rs485_protocol.c:75:6:RS485_Process	8	static
+../Core/Src/rs485_protocol.c:89:19:RS485_SendPacket	352	dynamic,ignoring_inline_asm
+../Core/Src/rs485_protocol.c:189:19:RS485_SendResponse	16	static
+../Core/Src/rs485_protocol.c:201:19:RS485_SendError	24	static
+../Core/Src/rs485_protocol.c:216:6:RS485_RegisterCommandHandler	16	static
+../Core/Src/rs485_protocol.c:226:17:RS485_GetStatus	4	static
+../Core/Src/rs485_protocol.c:237:10:RS485_CalculateCRC	24	static
+../Core/Src/rs485_protocol.c:260:13:RS485_ProcessPacket	320	dynamic
+../Core/Src/rs485_protocol.c:324:13:RS485_HandlePing	24	static
+../Core/Src/rs485_protocol.c:340:13:RS485_HandleGetVersion	24	static
+../Core/Src/rs485_protocol.c:361:13:RS485_HandleHeartbeat	24	static
+../Core/Src/rs485_protocol.c:375:13:RS485_HandleGetStatus	32	static
+../Core/Src/rs485_protocol.c:394:6:HAL_UART_RxCpltCallback	16	static
+../Core/Src/rs485_protocol.c:415:13:RS485_ProcessReceivedByte	24	static
