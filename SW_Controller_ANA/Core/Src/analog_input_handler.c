@@ -25,11 +25,8 @@ static float calibration_voltage_gain[NUM_VOLTAGE_CHANNELS] = {1.0f};
 /* Private Function Prototypes */
 static float Convert_ADC_To_420mA(uint16_t adc_value);
 static float Convert_ADC_To_Voltage(uint16_t adc_value);
-static float Convert_ADC_To_NTC_Temperature(uint16_t adc_value);
-static float Calculate_NTC_Resistance(uint16_t adc_value);
 static AnalogStatus_t Check_420mA_Status(float current_mA);
 static AnalogStatus_t Check_Voltage_Status(float voltage_V);
-static AnalogStatus_t Check_NTC_Status(uint16_t adc_value);
 
 /**
  * @brief  Initialize analog input handler
@@ -125,18 +122,6 @@ void AnalogInput_Update(void)
             analogData.analog_voltage[v_ch].status = 
                 Check_Voltage_Status(analogData.analog_voltage[v_ch].voltage_V);
         }
-        else {
-            /* NTC Channel */
-            uint8_t ntc_ch = current_channel - NUM_420MA_CHANNELS - NUM_VOLTAGE_CHANNELS;
-            analogData.ntc[ntc_ch].raw_adc = adc_value;
-            analogData.ntc[ntc_ch].resistance_ohm = 
-                Calculate_NTC_Resistance(adc_value);
-            analogData.ntc[ntc_ch].temperature_C = 
-                Convert_ADC_To_NTC_Temperature(adc_value);
-            
-            /* Check status */
-            analogData.ntc[ntc_ch].status = Check_NTC_Status(adc_value);
-        }
     // }  // End of if (HAL_ADC_PollForConversion(...))
     
     /* STUB: Comment out until ADC configured */
@@ -160,6 +145,19 @@ void AnalogInput_StartConversion(void)
     /* Start DMA-based continuous conversion - STUB until ADC configured */
     // HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&analogData, TOTAL_ANALOG_CHANNELS);
     DEBUG_INFO("ADC Start (STUB mode - no DMA yet)");
+}
+
+/**
+ * @brief  Get raw ADC value for 4-20mA channel
+ * @param  channel: Channel number (0-25)
+ * @retval Raw ADC value (0-65535)
+ */
+uint16_t AnalogInput_Get420mA_Raw(uint8_t channel)
+{
+    if (channel < NUM_420MA_CHANNELS) {
+        return analogData.analog_420[channel].raw_adc;
+    }
+    return 0;
 }
 
 /**
@@ -224,6 +222,19 @@ void AnalogInput_GetAll420mA(uint8_t* buffer, uint16_t bufferSize)
 }
 
 /**
+ * @brief  Get raw ADC value for 0-10V channel
+ * @param  channel: Channel number (0-5)
+ * @retval Raw ADC value (0-65535)
+ */
+uint16_t AnalogInput_GetVoltage_Raw(uint8_t channel)
+{
+    if (channel < NUM_VOLTAGE_CHANNELS) {
+        return analogData.analog_voltage[channel].raw_adc;
+    }
+    return 0;
+}
+
+/**
  * @brief  Get voltage value
  * @param  channel: Channel number (0-5)
  * @retval Voltage in V
@@ -284,63 +295,16 @@ void AnalogInput_GetAllVoltage(uint8_t* buffer, uint16_t bufferSize)
 }
 
 /**
- * @brief  Get NTC temperature
- * @param  channel: Channel number (0-3)
- * @retval Temperature in °C
- */
-float AnalogInput_GetNTC_Temperature(uint8_t channel)
-{
-    if (channel < NUM_NTC_CHANNELS) {
-        return analogData.ntc[channel].temperature_C;
-    }
-    return 0.0f;
-}
-
-/**
- * @brief  Get NTC resistance
- * @param  channel: Channel number (0-3)
- * @retval Resistance in Ohms
- */
-float AnalogInput_GetNTC_Resistance(uint8_t channel)
-{
-    if (channel < NUM_NTC_CHANNELS) {
-        return analogData.ntc[channel].resistance_ohm;
-    }
-    return 0.0f;
-}
-
-/**
- * @brief  Get NTC status
- * @param  channel: Channel number (0-3)
- * @retval Status code
- */
-AnalogStatus_t AnalogInput_GetNTC_Status(uint8_t channel)
-{
-    if (channel < NUM_NTC_CHANNELS) {
-        return analogData.ntc[channel].status;
-    }
-    return ANALOG_STATUS_ERROR;
-}
-
-/**
- * @brief  Get all NTC data
+ * @brief  Get all NTC data (REMOVED - NTC not supported)
  * @param  buffer: Buffer to store data
  * @param  bufferSize: Buffer size
  * @retval None
  */
 void AnalogInput_GetAllNTC(uint8_t* buffer, uint16_t bufferSize)
 {
-    if (bufferSize < (NUM_NTC_CHANNELS * 6)) {
-        return;
-    }
-    
-    uint16_t offset = 0;
-    for (uint8_t i = 0; i < NUM_NTC_CHANNELS; i++) {
-        memcpy(&buffer[offset], &analogData.ntc[i].raw_adc, 2);
-        offset += 2;
-        memcpy(&buffer[offset], &analogData.ntc[i].temperature_C, 4);
-        offset += 4;
-    }
+    (void)buffer;
+    (void)bufferSize;
+    // NTC functionality removed
 }
 
 /**
@@ -352,8 +316,7 @@ void AnalogInput_GetAllNTC(uint8_t* buffer, uint16_t bufferSize)
 void AnalogInput_GetAllData(uint8_t* buffer, uint16_t bufferSize)
 {
     uint16_t required_size = (NUM_420MA_CHANNELS * 6) + 
-                             (NUM_VOLTAGE_CHANNELS * 6) + 
-                             (NUM_NTC_CHANNELS * 6);
+                             (NUM_VOLTAGE_CHANNELS * 6);
     
     if (bufferSize < required_size) {
         return;
@@ -367,10 +330,6 @@ void AnalogInput_GetAllData(uint8_t* buffer, uint16_t bufferSize)
     
     /* Copy voltage data */
     AnalogInput_GetAllVoltage(&buffer[offset], bufferSize - offset);
-    offset += (NUM_VOLTAGE_CHANNELS * 6);
-    
-    /* Copy NTC data */
-    AnalogInput_GetAllNTC(&buffer[offset], bufferSize - offset);
 }
 
 /**
@@ -456,44 +415,6 @@ static float Convert_ADC_To_Voltage(uint16_t adc_value)
     return voltage;
 }
 
-/**
- * @brief  Calculate NTC resistance from ADC value
- * @param  adc_value: Raw ADC value
- * @retval Resistance in Ohms
- */
-static float Calculate_NTC_Resistance(uint16_t adc_value)
-{
-    /* Voltage at ADC input */
-    float voltage = ((float)adc_value / ADC_RESOLUTION) * ADC_VREF;
-    
-    /* Calculate NTC resistance using voltage divider formula */
-    float resistance = NTC_SERIES_RESISTOR * (ADC_VREF / voltage - 1.0f);
-    
-    return resistance;
-}
-
-/**
- * @brief  Convert ADC value to NTC temperature using Beta equation
- * @param  adc_value: Raw ADC value
- * @retval Temperature in °C
- */
-static float Convert_ADC_To_NTC_Temperature(uint16_t adc_value)
-{
-    float resistance = Calculate_NTC_Resistance(adc_value);
-    
-    /* Avoid division by zero */
-    if (resistance <= 0.0f) {
-        return -273.15f;
-    }
-    
-    /* Beta parameter equation for NTC */
-    float steinhart = 1.0f / (NTC_NOMINAL_TEMP + 273.15f);
-    steinhart += (1.0f / NTC_BETA_COEFFICIENT) * logf(resistance / NTC_NOMINAL_RESISTANCE);
-    float temperature_K = 1.0f / steinhart;
-    float temperature_C = temperature_K - 273.15f;
-    
-    return temperature_C;
-}
 
 /**
  * @brief  Check 4-20mA status
@@ -527,22 +448,5 @@ static AnalogStatus_t Check_Voltage_Status(float voltage_V)
     return ANALOG_STATUS_OK;
 }
 
-/**
- * @brief  Check NTC status
- * @param  adc_value: Raw ADC value
- * @retval Status code
- */
-static AnalogStatus_t Check_NTC_Status(uint16_t adc_value)
-{
-    /* Check for open circuit (very high resistance) */
-    if (adc_value > 64000) {
-        return ANALOG_STATUS_OPEN_CIRCUIT;
-    }
-    /* Check for short circuit (very low resistance) */
-    else if (adc_value < 500) {
-        return ANALOG_STATUS_SHORT_CIRCUIT;
-    }
-    return ANALOG_STATUS_OK;
-}
 
 

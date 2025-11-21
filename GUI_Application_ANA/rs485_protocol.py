@@ -513,14 +513,13 @@ class RS485Protocol:
         response = self.send_command_and_wait(dest_addr, RS485Command.CMD_READ_ANALOG_420)
         
         if response and response.command == RS485Command.CMD_ANALOG_420_RESPONSE:
-            # Parse 26 channels * 6 bytes each (2 raw + 4 float)
+            # Parse 26 channels * 4 bytes each (4 float)
             channels = []
             for i in range(26):
-                offset = i * 6
-                if offset + 6 <= len(response.data):
-                    raw = struct.unpack('<H', response.data[offset:offset+2])[0]
-                    current = struct.unpack('<f', response.data[offset+2:offset+6])[0]
-                    channels.append({'raw': raw, 'current_mA': current})
+                offset = i * 4
+                if offset + 4 <= len(response.data):
+                    current = struct.unpack('<f', response.data[offset:offset+4])[0]
+                    channels.append({'raw': 0, 'current_mA': current})
             return channels
         
         return None
@@ -530,14 +529,13 @@ class RS485Protocol:
         response = self.send_command_and_wait(dest_addr, RS485Command.CMD_READ_ANALOG_VOLTAGE)
         
         if response and response.command == RS485Command.CMD_ANALOG_VOLTAGE_RESPONSE:
-            # Parse 6 channels * 6 bytes each
+            # Parse 6 channels * 4 bytes each
             channels = []
             for i in range(6):
-                offset = i * 6
-                if offset + 6 <= len(response.data):
-                    raw = struct.unpack('<H', response.data[offset:offset+2])[0]
-                    voltage = struct.unpack('<f', response.data[offset+2:offset+6])[0]
-                    channels.append({'raw': raw, 'voltage_V': voltage})
+                offset = i * 4
+                if offset + 4 <= len(response.data):
+                    voltage = struct.unpack('<f', response.data[offset:offset+4])[0]
+                    channels.append({'raw': 0, 'voltage_V': voltage})
             return channels
         
         return None
@@ -547,14 +545,13 @@ class RS485Protocol:
         response = self.send_command_and_wait(dest_addr, RS485Command.CMD_READ_NTC)
         
         if response and response.command == RS485Command.CMD_NTC_RESPONSE:
-            # Parse 4 channels * 6 bytes each
+            # Parse 4 channels * 4 bytes each
             channels = []
             for i in range(4):
-                offset = i * 6
-                if offset + 6 <= len(response.data):
-                    raw = struct.unpack('<H', response.data[offset:offset+2])[0]
-                    temp = struct.unpack('<f', response.data[offset+2:offset+6])[0]
-                    channels.append({'raw': raw, 'temperature_C': temp})
+                offset = i * 4
+                if offset + 4 <= len(response.data):
+                    temp = struct.unpack('<f', response.data[offset:offset+4])[0]
+                    channels.append({'raw': 0, 'temperature_C': temp})
             return channels
         
         return None

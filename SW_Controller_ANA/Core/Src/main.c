@@ -62,8 +62,6 @@ static char versionString[VERSION_STRING_SIZE];
 /* Command handlers for analog inputs */
 void HandleRead420mA(const RS485_Packet_t* packet);
 void HandleReadVoltage(const RS485_Packet_t* packet);
-void HandleReadNTC(const RS485_Packet_t* packet);
-void HandleReadAllAnalog(const RS485_Packet_t* packet);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -141,8 +139,6 @@ int main(void)
   /* Register analog command handlers */
   RS485_RegisterCommandHandler(CMD_READ_ANALOG_420, HandleRead420mA);
   RS485_RegisterCommandHandler(CMD_READ_ANALOG_VOLTAGE, HandleReadVoltage);
-  RS485_RegisterCommandHandler(CMD_READ_NTC, HandleReadNTC);
-  RS485_RegisterCommandHandler(CMD_READ_ALL_ANALOG, HandleReadAllAnalog);
   
   DEBUG_INFO("System initialization complete");
   DEBUG_INFO("Entering main loop...");
@@ -540,22 +536,26 @@ void HandleRead420mA(const RS485_Packet_t* packet)
 {
     DEBUG_INFO("READ_420MA command from 0x%02X", packet->srcAddr);
     
-    // Get all 4-20mA values as floats (26 channels × 4 bytes = 104 bytes)
-    uint8_t analogData[NUM_420MA_CHANNELS * 4];
+    // Get all 4-20mA values: raw ADC (uint16) + float (26 channels × 6 bytes = 156 bytes)
+    uint8_t analogData[NUM_420MA_CHANNELS * 6];
     
     for (uint8_t i = 0; i < NUM_420MA_CHANNELS; i++) {
+        uint16_t raw = AnalogInput_Get420mA_Raw(i);
         float value = AnalogInput_Get420mA_Current(i);
-        memcpy(&analogData[i * 4], &value, 4);  // Little-endian float
+        
+        // Pack: raw (2 bytes) + float (4 bytes)
+        memcpy(&analogData[i * 6], &raw, 2);
+        memcpy(&analogData[i * 6 + 2], &value, 4);
         
         if (i < 5) {  // Debug first 5 channels
-            DEBUG_DEBUG("AI%d: %.2f mA", i, value);
+            DEBUG_DEBUG("AI%d: RAW=%u, %.2f mA", i, raw, value);
         }
     }
     
     RS485_SendResponse(packet->srcAddr, CMD_ANALOG_420_RESPONSE, 
                       analogData, sizeof(analogData));
     
-    DEBUG_INFO("4-20mA data sent (26 channels, 104 bytes)");
+    DEBUG_INFO("4-20mA data sent (26 channels, 156 bytes)");
 }
 
 /**
@@ -567,84 +567,26 @@ void HandleReadVoltage(const RS485_Packet_t* packet)
 {
     DEBUG_INFO("READ_VOLTAGE command from 0x%02X", packet->srcAddr);
     
-    // Get all 0-10V values as floats (6 channels × 4 bytes = 24 bytes)
-    uint8_t voltageData[NUM_VOLTAGE_CHANNELS * 4];
+    // Get all 0-10V values: raw ADC (uint16) + float (6 channels × 6 bytes = 36 bytes)
+    uint8_t voltageData[NUM_VOLTAGE_CHANNELS * 6];
     
     for (uint8_t i = 0; i < NUM_VOLTAGE_CHANNELS; i++) {
+        uint16_t raw = AnalogInput_GetVoltage_Raw(i);
         float value = AnalogInput_GetVoltage_V(i);
-        memcpy(&voltageData[i * 4], &value, 4);  // Little-endian float
-        DEBUG_DEBUG("V%d: %.2f V", i, value);
+        
+        // Pack: raw (2 bytes) + float (4 bytes)
+        memcpy(&voltageData[i * 6], &raw, 2);
+        memcpy(&voltageData[i * 6 + 2], &value, 4);
+        
+        DEBUG_DEBUG("V%d: RAW=%u, %.2f V", i, raw, value);
     }
     
     RS485_SendResponse(packet->srcAddr, CMD_ANALOG_VOLTAGE_RESPONSE, 
                       voltageData, sizeof(voltageData));
     
-    DEBUG_INFO("0-10V data sent (6 channels, 24 bytes)");
+    DEBUG_INFO("0-10V data sent (6 channels, 36 bytes)");
 }
 
-/**
- * @brief  Handle Read NTC command
- * @param  packet: Received packet
- * @retval None
- */
-void HandleReadNTC(const RS485_Packet_t* packet)
-{
-    DEBUG_INFO("READ_NTC command from 0x%02X", packet->srcAddr);
-    
-    // Get all NTC values as floats (4 channels × 4 bytes = 16 bytes)
-    uint8_t ntcData[NUM_NTC_CHANNELS * 4];
-    
-    for (uint8_t i = 0; i < NUM_NTC_CHANNELS; i++) {
-        float value = AnalogInput_GetNTC_Temperature(i);
-        memcpy(&ntcData[i * 4], &value, 4);  // Little-endian float
-        DEBUG_DEBUG("NTC%d: %.1f °C", i, value);
-    }
-    
-    RS485_SendResponse(packet->srcAddr, CMD_NTC_RESPONSE, 
-                      ntcData, sizeof(ntcData));
-    
-    DEBUG_INFO("NTC temperature data sent (4 channels, 16 bytes)");
-}
-
-/**
- * @brief  Handle Read All Analog command
- * @param  packet: Received packet
- * @retval None
- */
-void HandleReadAllAnalog(const RS485_Packet_t* packet)
-{
-    DEBUG_INFO("READ_ALL_ANALOG command from 0x%02X", packet->srcAddr);
-    
-    // Pack all analog data: 4-20mA (104 bytes) + 0-10V (24 bytes) + NTC (16 bytes) = 144 bytes
-    uint8_t allData[144];
-    uint16_t offset = 0;
-    
-    // Pack 4-20mA data
-    for (uint8_t i = 0; i < NUM_420MA_CHANNELS; i++) {
-        float value = AnalogInput_Get420mA_Current(i);
-        memcpy(&allData[offset], &value, 4);
-        offset += 4;
-    }
-    
-    // Pack 0-10V data
-    for (uint8_t i = 0; i < NUM_VOLTAGE_CHANNELS; i++) {
-        float value = AnalogInput_GetVoltage_V(i);
-        memcpy(&allData[offset], &value, 4);
-        offset += 4;
-    }
-    
-    // Pack NTC data
-    for (uint8_t i = 0; i < NUM_NTC_CHANNELS; i++) {
-        float value = AnalogInput_GetNTC_Temperature(i);
-        memcpy(&allData[offset], &value, 4);
-        offset += 4;
-    }
-    
-    RS485_SendResponse(packet->srcAddr, CMD_ALL_ANALOG_RESPONSE, 
-                      allData, offset);
-    
-    DEBUG_INFO("All analog data sent (%d bytes)", offset);
-}
 
 /* USER CODE END 4 */
 

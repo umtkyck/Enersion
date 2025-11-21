@@ -49,10 +49,6 @@ typedef enum {
     CMD_ANALOG_420_RESPONSE = 0x41,
     CMD_READ_ANALOG_VOLTAGE = 0x42,
     CMD_ANALOG_VOLTAGE_RESPONSE = 0x43,
-    CMD_READ_NTC            = 0x44,
-    CMD_NTC_RESPONSE        = 0x45,
-    CMD_READ_ALL_ANALOG     = 0x46,
-    CMD_ALL_ANALOG_RESPONSE = 0x47,
     CMD_ERROR_RESPONSE      = 0xFF
 } RS485_Command_t;
 

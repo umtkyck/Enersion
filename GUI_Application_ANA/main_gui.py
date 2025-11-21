@@ -12,36 +12,196 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QGridLayout, QGroupBox, QProgressBar, QTabWidget,
                             QMessageBox, QMenuBar, QMenu, QAction, QScrollArea,
                             QInputDialog)
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt5.QtGui import QFont
 import serial.tools.list_ports
 
-from rs485_protocol import RS485Protocol, RS485_ADDR_CONTROLLER_420, RS485_ADDR_GUI
+from rs485_protocol import RS485Protocol, RS485_ADDR_CONTROLLER_420, RS485_ADDR_GUI, MCUVersion
 from version import get_version_string, APP_NAME, APP_DESCRIPTION, APP_COMPANY
-from version import VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, VERSION_NAME
 
 # RS485 Command codes for analog reading
 CMD_READ_ANALOG_420 = 0x40
 CMD_ANALOG_420_RESPONSE = 0x41
 CMD_READ_ANALOG_VOLTAGE = 0x42
 CMD_ANALOG_VOLTAGE_RESPONSE = 0x43
-CMD_READ_NTC = 0x44
-CMD_NTC_RESPONSE = 0x45
-CMD_READ_ALL_ANALOG = 0x46
-CMD_ALL_ANALOG_RESPONSE = 0x47
 
-class AnalogInputWidget(QWidget):
+class HealthMonitorWorker(QObject):
+    """Worker thread for health monitoring"""
+    
+    health_updated = pyqtSignal(int, dict)  # mcu_id, health_data
+    connection_lost = pyqtSignal(int)  # mcu_id
+    
+    def __init__(self, protocol: RS485Protocol, target_address: int):
+        super().__init__()
+        self.protocol = protocol
+        self.target_address = target_address
+        self.running = False
+    
+    def start_monitoring(self):
+        """Start monitoring"""
+        self.running = True
+        self.monitor()
+    
+    def stop_monitoring(self):
+        """Stop monitoring"""
+        self.running = False
+    
+    @pyqtSlot()
+    def monitor(self):
+        """Monitor MCU health"""
+        while self.running:
+            try:
+                # Send heartbeat
+                result = self.protocol.heartbeat(self.target_address)
+                
+                if result:
+                    mcu_id, health = result
+                    
+                    # Get detailed status
+                    status = self.protocol.get_status(self.target_address)
+                    
+                    health_data = {
+                        'health': health,
+                        'connected': True,
+                        'status': status
+                    }
+                    
+                    self.health_updated.emit(self.target_address, health_data)
+                else:
+                    self.connection_lost.emit(self.target_address)
+                    
+            except Exception as e:
+                print(f"Health monitor error for MCU {self.target_address}: {e}")
+                self.connection_lost.emit(self.target_address)
+            
+            # Sleep before next check
+            QThread.msleep(2000)  # Check every 2 seconds
+
+class MCUWidget(QGroupBox):
+    """Widget to display MCU status"""
+    
+    def __init__(self, mcu_name: str, mcu_addr: int):
+        super().__init__(mcu_name)
+        self.mcu_addr = mcu_addr
+        self.connected = False
+        
+        self.init_ui()
+    
+    def init_ui(self):
+        """Initialize UI"""
+        layout = QVBoxLayout()
+        
+        # Connection status
+        status_layout = QHBoxLayout()
+        status_layout.addWidget(QLabel("Status:"))
+        self.status_label = QLabel("Disconnected")
+        self.status_label.setStyleSheet("color: red; font-weight: bold;")
+        status_layout.addWidget(self.status_label)
+        status_layout.addStretch()
+        layout.addLayout(status_layout)
+        
+        # Health bar
+        health_layout = QHBoxLayout()
+        health_layout.addWidget(QLabel("Health:"))
+        self.health_bar = QProgressBar()
+        self.health_bar.setRange(0, 100)
+        self.health_bar.setValue(0)
+        self.health_bar.setFormat("%v%")
+        health_layout.addWidget(self.health_bar)
+        layout.addLayout(health_layout)
+        
+        # Version
+        self.version_label = QLabel("Version: N/A")
+        layout.addWidget(self.version_label)
+        
+        # Uptime
+        self.uptime_label = QLabel("Uptime: N/A")
+        layout.addWidget(self.uptime_label)
+        
+        # Statistics
+        stats_layout = QGridLayout()
+        stats_layout.addWidget(QLabel("RX Packets:"), 0, 0)
+        self.rx_label = QLabel("0")
+        stats_layout.addWidget(self.rx_label, 0, 1)
+        
+        stats_layout.addWidget(QLabel("TX Packets:"), 1, 0)
+        self.tx_label = QLabel("0")
+        stats_layout.addWidget(self.tx_label, 1, 1)
+        
+        stats_layout.addWidget(QLabel("Errors:"), 2, 0)
+        self.error_label = QLabel("0")
+        stats_layout.addWidget(self.error_label, 2, 1)
+        
+        layout.addLayout(stats_layout)
+        
+        self.setLayout(layout)
+    
+    def update_connection(self, connected: bool):
+        """Update connection status"""
+        self.connected = connected
+        if connected:
+            self.status_label.setText("Connected")
+            self.status_label.setStyleSheet("color: green; font-weight: bold;")
+        else:
+            self.status_label.setText("Disconnected")
+            self.status_label.setStyleSheet("color: red; font-weight: bold;")
+            self.health_bar.setValue(0)
+    
+    def update_health(self, health_data: dict):
+        """Update health information"""
+        health = health_data.get('health', 0)
+        self.health_bar.setValue(health)
+        
+        # Update color based on health
+        if health >= 80:
+            color = "green"
+        elif health >= 50:
+            color = "orange"
+        else:
+            color = "red"
+        
+        self.health_bar.setStyleSheet(f"""
+            QProgressBar {{
+                border: 2px solid grey;
+                border-radius: 5px;
+                text-align: center;
+            }}
+            QProgressBar::chunk {{
+                background-color: {color};
+            }}
+        """)
+        
+        # Update status if available
+        status = health_data.get('status')
+        if status:
+            self.uptime_label.setText(f"Uptime: {self._format_uptime(status.uptime)}")
+            self.rx_label.setText(str(status.rx_packet_count))
+            self.tx_label.setText(str(status.tx_packet_count))
+            self.error_label.setText(str(status.error_count))
+    
+    def update_version(self, version: MCUVersion):
+        """Update version information"""
+        self.version_label.setText(f"Version: {version}")
+    
+    @staticmethod
+    def _format_uptime(seconds: int) -> str:
+        """Format uptime"""
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        secs = seconds % 60
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+class AnalogInputWidget(QGroupBox):
     """Widget for displaying 4-20mA, 0-10V, and NTC analog inputs"""
     
     def __init__(self, protocol: RS485Protocol):
-        super().__init__()
+        super().__init__("Analog Inputs (Controller 420)")
         self.protocol = protocol
         self.target_device_address = RS485_ADDR_CONTROLLER_420
         
         # Data storage
         self.analog_420_values = [0.0] * 26
         self.voltage_values = [0.0] * 6
-        self.ntc_values = [0.0] * 4
         
         self.init_ui()
         
@@ -71,8 +231,8 @@ class AnalogInputWidget(QWidget):
         for i in range(26):
             label_name = QLabel(f"AI{i}:")
             label_name.setMinimumWidth(40)
-            label_value = QLabel("-- mA")
-            label_value.setStyleSheet("border: 1px solid gray; padding: 5px; min-width: 100px;")
+            label_value = QLabel("-- mA | RAW: --")
+            label_value.setStyleSheet("border: 1px solid gray; padding: 5px; min-width: 180px;")
             grid_420.addWidget(label_name, i // 4, (i % 4) * 2)
             grid_420.addWidget(label_value, i // 4, (i % 4) * 2 + 1)
             self.analog_420_labels.append(label_value)
@@ -93,8 +253,8 @@ class AnalogInputWidget(QWidget):
         for i in range(6):
             label_name = QLabel(f"V{i}:")
             label_name.setMinimumWidth(40)
-            label_value = QLabel("-- V")
-            label_value.setStyleSheet("border: 1px solid gray; padding: 5px; min-width: 100px;")
+            label_value = QLabel("-- V | RAW: --")
+            label_value.setStyleSheet("border: 1px solid gray; padding: 5px; min-width: 180px;")
             grid_v.addWidget(label_name, i // 3, (i % 3) * 2)
             grid_v.addWidget(label_value, i // 3, (i % 3) * 2 + 1)
             self.voltage_labels.append(label_value)
@@ -103,27 +263,6 @@ class AnalogInputWidget(QWidget):
         voltage_layout.addStretch()
         voltage_tab.setLayout(voltage_layout)
         tabs.addTab(voltage_tab, "0-10V (6 channels)")
-        
-        # ========== NTC Tab ==========
-        ntc_tab = QWidget()
-        ntc_layout = QVBoxLayout()
-        
-        grid_ntc = QGridLayout()
-        grid_ntc.setSpacing(5)
-        self.ntc_labels = []
-        for i in range(4):
-            label_name = QLabel(f"NTC{i}:")
-            label_name.setMinimumWidth(50)
-            label_value = QLabel("-- °C")
-            label_value.setStyleSheet("border: 1px solid gray; padding: 5px; min-width: 100px;")
-            grid_ntc.addWidget(label_name, i // 2, (i % 2) * 2)
-            grid_ntc.addWidget(label_value, i // 2, (i % 2) * 2 + 1)
-            self.ntc_labels.append(label_value)
-        
-        ntc_layout.addLayout(grid_ntc)
-        ntc_layout.addStretch()
-        ntc_tab.setLayout(ntc_layout)
-        tabs.addTab(ntc_tab, "NTC (4 channels)")
         
         main_layout.addWidget(tabs)
         
@@ -142,8 +281,9 @@ class AnalogInputWidget(QWidget):
         
         main_layout.addLayout(button_layout)
         
-        # Status label
+        # Status info
         self.status_label = QLabel("Ready - Click 'Read All Now' to read analog inputs")
+        self.status_label.setStyleSheet("padding: 5px; background-color: #f0f0f0;")
         self.status_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(self.status_label)
         
@@ -168,9 +308,6 @@ class AnalogInputWidget(QWidget):
         # Read 0-10V inputs
         self.read_voltage_inputs()
         
-        # Read NTC inputs
-        self.read_ntc_inputs()
-        
         self.status_label.setText("✓ All analog inputs updated")
     
     def read_420ma_inputs(self):
@@ -181,15 +318,15 @@ class AnalogInputWidget(QWidget):
                 self.target_device_address,
                 CMD_READ_ANALOG_420,
                 b'',
-                CMD_ANALOG_420_RESPONSE,
                 timeout=2.0
             )
             
-            if response and len(response) >= 104:  # 26 channels × 4 bytes = 104 bytes
-                # Parse 26 float values (little-endian)
+            if response and len(response.data) >= 156:  # 26 channels × 6 bytes (2 raw + 4 float) = 156 bytes
+                # Parse 26 channels: raw (uint16) + float value
                 for i in range(26):
-                    offset = i * 4
-                    value = struct.unpack('<f', response[offset:offset+4])[0]
+                    offset = i * 6
+                    raw_adc = struct.unpack('<H', response.data[offset:offset+2])[0]
+                    value = struct.unpack('<f', response.data[offset+2:offset+6])[0]
                     self.analog_420_values[i] = value
                     
                     # Update label with color coding
@@ -202,9 +339,9 @@ class AnalogInputWidget(QWidget):
                     else:
                         color = "orange"  # Warning range
                     
-                    self.analog_420_labels[i].setText(f"{value:.2f} mA")
+                    self.analog_420_labels[i].setText(f"{value:.2f} mA | RAW: {raw_adc}")
                     self.analog_420_labels[i].setStyleSheet(
-                        f"border: 2px solid {color}; padding: 5px; min-width: 100px; font-weight: bold;"
+                        f"border: 2px solid {color}; padding: 5px; min-width: 180px; font-weight: bold;"
                     )
         except Exception as e:
             print(f"Error reading 4-20mA inputs: {e}")
@@ -217,14 +354,14 @@ class AnalogInputWidget(QWidget):
                 self.target_device_address,
                 CMD_READ_ANALOG_VOLTAGE,
                 b'',
-                CMD_ANALOG_VOLTAGE_RESPONSE,
                 timeout=2.0
             )
             
-            if response and len(response) >= 24:  # 6 channels × 4 bytes = 24 bytes
+            if response and len(response.data) >= 36:  # 6 channels × 6 bytes (2 raw + 4 float) = 36 bytes
                 for i in range(6):
-                    offset = i * 4
-                    value = struct.unpack('<f', response[offset:offset+4])[0]
+                    offset = i * 6
+                    raw_adc = struct.unpack('<H', response.data[offset:offset+2])[0]
+                    value = struct.unpack('<f', response.data[offset+2:offset+6])[0]
                     self.voltage_values[i] = value
                     
                     # Update label with color coding
@@ -233,44 +370,14 @@ class AnalogInputWidget(QWidget):
                     else:
                         color = "red"  # Out of range
                     
-                    self.voltage_labels[i].setText(f"{value:.2f} V")
+                    self.voltage_labels[i].setText(f"{value:.2f} V | RAW: {raw_adc}")
                     self.voltage_labels[i].setStyleSheet(
-                        f"border: 2px solid {color}; padding: 5px; min-width: 100px; font-weight: bold;"
+                        f"border: 2px solid {color}; padding: 5px; min-width: 180px; font-weight: bold;"
                     )
         except Exception as e:
             print(f"Error reading voltage inputs: {e}")
             self.status_label.setText(f"❌ Error reading voltages: {e}")
     
-    def read_ntc_inputs(self):
-        """Read NTC temperature inputs"""
-        try:
-            response = self.protocol.send_command_and_wait(
-                self.target_device_address,
-                CMD_READ_NTC,
-                b'',
-                CMD_NTC_RESPONSE,
-                timeout=2.0
-            )
-            
-            if response and len(response) >= 16:  # 4 channels × 4 bytes = 16 bytes
-                for i in range(4):
-                    offset = i * 4
-                    value = struct.unpack('<f', response[offset:offset+4])[0]
-                    self.ntc_values[i] = value
-                    
-                    # Update label with color coding
-                    if -40.0 <= value <= 125.0:
-                        color = "green"
-                    else:
-                        color = "red"  # Out of range
-                    
-                    self.ntc_labels[i].setText(f"{value:.1f} °C")
-                    self.ntc_labels[i].setStyleSheet(
-                        f"border: 2px solid {color}; padding: 5px; min-width: 100px; font-weight: bold;"
-                    )
-        except Exception as e:
-            print(f"Error reading NTC inputs: {e}")
-            self.status_label.setText(f"❌ Error reading NTC: {e}")
     
     def refresh_all_data(self):
         """Auto-refresh all analog data"""
@@ -294,24 +401,17 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.protocol = None
-        self.analog_widget = None
+        self.health_worker = None
+        self.health_thread = None
         self.target_device_address = RS485_ADDR_CONTROLLER_420
         
-        # Health monitoring timer
-        self.health_timer = QTimer()
-        self.health_timer.timeout.connect(self.update_health)
-        
-        try:
-            self.init_ui()
-            self.scan_devices()
-        except Exception as e:
-            print(f"Error during initialization: {e}")
-            traceback.print_exc()
+        self.init_ui()
+        self.scan_devices()
     
     def init_ui(self):
         """Initialize UI"""
         self.setWindowTitle(get_version_string())
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 900, 700)
         
         # Central widget
         central_widget = QWidget()
@@ -341,7 +441,7 @@ class MainWindow(QMainWindow):
         conn_layout.addWidget(self.baud_combo)
         
         self.connect_btn = QPushButton("Connect")
-        self.connect_btn.clicked.connect(self.connect)
+        self.connect_btn.clicked.connect(self.toggle_connection)
         self.connect_btn.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
         conn_layout.addWidget(self.connect_btn)
         
@@ -349,42 +449,11 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(conn_group)
         
         # ========== Controller Status ==========
-        status_group = QGroupBox("Controller Status (Analog Inputs - 4-20mA, 0-10V, NTC)")
-        status_layout = QGridLayout()
+        self.mcu_widget = MCUWidget("Controller Status (Analog Inputs)", self.target_device_address)
+        main_layout.addWidget(self.mcu_widget)
         
-        status_layout.addWidget(QLabel("Status:"), 0, 0)
-        self.status_label = QLabel("Disconnected")
-        self.status_label.setStyleSheet("color: red; font-weight: bold;")
-        status_layout.addWidget(self.status_label, 0, 1)
-        
-        status_layout.addWidget(QLabel("Health:"), 1, 0)
-        self.health_bar = QProgressBar()
-        self.health_bar.setMaximum(100)
-        self.health_bar.setValue(0)
-        status_layout.addWidget(self.health_bar, 1, 1)
-        
-        status_layout.addWidget(QLabel("Version:"), 2, 0)
-        self.version_label = QLabel("N/A")
-        status_layout.addWidget(self.version_label, 2, 1)
-        
-        status_layout.addWidget(QLabel("Uptime:"), 3, 0)
-        self.uptime_label = QLabel("N/A")
-        status_layout.addWidget(self.uptime_label, 3, 1)
-        
-        status_layout.addWidget(QLabel("RX Packets:"), 4, 0)
-        self.rx_packets_label = QLabel("0")
-        status_layout.addWidget(self.rx_packets_label, 4, 1)
-        
-        status_layout.addWidget(QLabel("TX Packets:"), 5, 0)
-        self.tx_packets_label = QLabel("0")
-        status_layout.addWidget(self.tx_packets_label, 5, 1)
-        
-        status_layout.addWidget(QLabel("Errors:"), 6, 0)
-        self.errors_label = QLabel("0")
-        status_layout.addWidget(self.errors_label, 6, 1)
-        
-        status_group.setLayout(status_layout)
-        main_layout.addWidget(status_group)
+        # ========== Analog Inputs Widget ==========
+        self.analog_widget = None
         
         # Add stretch to push everything to top
         main_layout.addStretch()
@@ -436,6 +505,11 @@ class MainWindow(QMainWindow):
             self.target_device_address = addresses[item]
             if self.analog_widget:
                 self.analog_widget.set_target_address(self.target_device_address)
+            
+            # Update health worker target if running
+            if self.health_worker:
+                self.health_worker.target_address = self.target_device_address
+                
             QMessageBox.information(self, "Address Updated", 
                                    f"Target device address set to 0x{self.target_device_address:02X}")
     
@@ -458,6 +532,13 @@ class MainWindow(QMainWindow):
             self.port_combo.addItem("Error scanning ports")
             self.connect_btn.setEnabled(False)
     
+    def toggle_connection(self):
+        """Toggle RS485 connection"""
+        if self.protocol is None or not self.protocol.is_connected():
+            self.connect()
+        else:
+            self.disconnect()
+            
     def connect(self):
         """Connect to RS485"""
         port = self.port_combo.currentData()
@@ -470,7 +551,7 @@ class MainWindow(QMainWindow):
         try:
             baudrate = int(self.baud_combo.currentText())
             
-            # Close existing protocol if any
+            # Ensure clean state
             if self.protocol:
                 try:
                     self.protocol.disconnect()
@@ -488,11 +569,13 @@ class MainWindow(QMainWindow):
                 
                 self.statusBar().showMessage(f"Connected to {port} @ {baudrate} baud")
                 
-                # Add Analog Input widget
+                # Add Analog Input widget if not exists
                 if self.analog_widget is None:
                     self.analog_widget = AnalogInputWidget(self.protocol)
                     self.analog_widget.set_target_address(self.target_device_address)
                     self.centralWidget().layout().insertWidget(2, self.analog_widget)
+                else:
+                    self.analog_widget.protocol = self.protocol
                 
                 # Start health monitoring
                 self.start_health_monitoring()
@@ -515,23 +598,63 @@ class MainWindow(QMainWindow):
     
     def disconnect(self):
         """Disconnect from RS485"""
+        # Stop health monitoring first
+        self.stop_health_monitoring()
+        
         if self.protocol:
             self.protocol.disconnect()
             self.protocol = None
         
-        self.health_timer.stop()
         self.connect_btn.setText("Connect")
         self.connect_btn.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
         self.port_combo.setEnabled(True)
         self.baud_combo.setEnabled(True)
         self.refresh_btn.setEnabled(True)
         
+        self.mcu_widget.update_connection(False)
         self.status_label.setText("Disconnected")
         self.status_label.setStyleSheet("color: red; font-weight: bold;")
-        self.health_bar.setValue(0)
         
         self.statusBar().showMessage("Disconnected")
     
+    def start_health_monitoring(self):
+        """Start periodic health monitoring"""
+        if self.protocol:
+            self.health_thread = QThread()
+            self.health_worker = HealthMonitorWorker(self.protocol, self.target_device_address)
+            self.health_worker.moveToThread(self.health_thread)
+            
+            # Connect signals
+            self.health_thread.started.connect(self.health_worker.start_monitoring)
+            self.health_worker.health_updated.connect(self.on_health_updated)
+            self.health_worker.connection_lost.connect(self.on_connection_lost)
+            
+            self.health_thread.start()
+    
+    def stop_health_monitoring(self):
+        """Stop health monitoring"""
+        if self.health_worker:
+            self.health_worker.stop_monitoring()
+        
+        if self.health_thread:
+            self.health_thread.quit()
+            self.health_thread.wait()
+            self.health_thread = None
+            self.health_worker = None
+
+    @pyqtSlot(int, dict)
+    def on_health_updated(self, mcu_addr: int, health_data: dict):
+        """Handle health update"""
+        if mcu_addr == self.target_device_address:
+            self.mcu_widget.update_connection(True)
+            self.mcu_widget.update_health(health_data)
+
+    @pyqtSlot(int)
+    def on_connection_lost(self, mcu_addr: int):
+        """Handle connection lost"""
+        if mcu_addr == self.target_device_address:
+            self.mcu_widget.update_connection(False)
+
     def scan_device_after_connect(self):
         """Scan for Controller 420 device after connection"""
         if not self.protocol or not self.protocol.is_connected():
@@ -542,24 +665,21 @@ class MainWindow(QMainWindow):
         
         # Ping Controller 420 device
         if self.protocol.ping(self.target_device_address):
-            self.status_label.setText("Connected")
-            self.status_label.setStyleSheet("color: green; font-weight: bold;")
+            self.mcu_widget.update_connection(True)
             
             # Get version
             version = self.protocol.get_version(self.target_device_address)
             if version:
-                self.version_label.setText(version)
+                self.mcu_widget.update_version(version)
             
             self.statusBar().showMessage(f"✓ Controller 420 (0x{self.target_device_address:02X}) connected!")
             QMessageBox.information(self, "Scan Complete", 
                                    f"Controller 420 (0x{self.target_device_address:02X}) detected and ready!\n\n"
                                    "You can now monitor analog inputs:\n"
-                                   "- 26x 4-20mA channels\n"
-                                   "- 6x 0-10V channels\n"
-                                   "- 4x NTC temperature channels")
+                                   "- 26x 4-20mA channels (with RAW ADC)\n"
+                                   "- 6x 0-10V channels (with RAW ADC)")
         else:
-            self.status_label.setText("Disconnected")
-            self.status_label.setStyleSheet("color: red; font-weight: bold;")
+            self.mcu_widget.update_connection(False)
             self.statusBar().showMessage(f"✗ Controller 420 not found")
             QMessageBox.warning(self, "Scan Complete", 
                                f"Controller 420 (0x{self.target_device_address:02X}) not detected.\n\n"
@@ -568,36 +688,6 @@ class MainWindow(QMainWindow):
                                "- Controller power\n"
                                "- Baud rate settings (115200)\n"
                                f"- Controller address (should be 0x{self.target_device_address:02X})")
-    
-    def start_health_monitoring(self):
-        """Start periodic health monitoring"""
-        self.health_timer.start(2000)  # Every 2 seconds
-    
-    def update_health(self):
-        """Update health status from controller"""
-        if not self.protocol or not self.protocol.is_connected():
-            return
-        
-        try:
-            # Get status
-            status = self.protocol.get_status(self.target_device_address)
-            if status:
-                health, uptime, rx_packets, tx_packets, errors = status
-                
-                self.health_bar.setValue(health)
-                self.uptime_label.setText(f"{uptime}s")
-                self.rx_packets_label.setText(str(rx_packets))
-                self.tx_packets_label.setText(str(tx_packets))
-                self.errors_label.setText(str(errors))
-                
-                if health >= 80:
-                    self.health_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }")
-                elif health >= 50:
-                    self.health_bar.setStyleSheet("QProgressBar::chunk { background-color: orange; }")
-                else:
-                    self.health_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
-        except Exception as e:
-            print(f"Error updating health: {e}")
     
     def show_about(self):
         """Show about dialog"""
@@ -608,8 +698,7 @@ class MainWindow(QMainWindow):
     
     def closeEvent(self, event):
         """Handle window close"""
-        if self.protocol:
-            self.disconnect()
+        self.disconnect()
         event.accept()
 
 
@@ -631,4 +720,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -282,8 +282,6 @@ static void RS485_ProcessPacket(const uint8_t* buffer)
     uint16_t calculatedCRC = RS485_CalculateCRC(crcBuffer, 4 + length);
     
     if (calculatedCRC != receivedCRC) {
-        DEBUG_ERROR("CRC Error: Expected 0x%04X, Got 0x%04X", 
-                   calculatedCRC, receivedCRC);
         status.errorCount++;
         RS485_SendError(srcAddr, RS485_ERR_INVALID_CHECKSUM);
         return;
@@ -311,7 +309,6 @@ static void RS485_ProcessPacket(const uint8_t* buffer)
     if (commandHandlers[command] != NULL) {
         commandHandlers[command](&packet);
     } else {
-        DEBUG_WARNING("Unhandled command: 0x%02X", command);
         RS485_SendError(srcAddr, RS485_ERR_INVALID_COMMAND);
     }
 }
@@ -323,13 +320,7 @@ static void RS485_ProcessPacket(const uint8_t* buffer)
  */
 static void RS485_HandlePing(const RS485_Packet_t* packet)
 {
-    DEBUG_INFO("PING received from 0x%02X", packet->srcAddr);
-    HAL_StatusTypeDef result = RS485_SendResponse(packet->srcAddr, CMD_PING_RESPONSE, NULL, 0);
-    if (result == HAL_OK) {
-        DEBUG_INFO("PING response sent");
-    } else {
-        DEBUG_ERROR("PING response FAILED! Error=%d", result);
-    }
+    RS485_SendResponse(packet->srcAddr, CMD_PING_RESPONSE, NULL, 0);
 }
 
 /**
@@ -349,7 +340,6 @@ static void RS485_HandleGetVersion(const RS485_Packet_t* packet)
     versionData[6] = 0; // Reserved
     versionData[7] = 0; // Reserved
     
-    DEBUG_INFO("VERSION request from 0x%02X", packet->srcAddr);
     RS485_SendResponse(packet->srcAddr, CMD_VERSION_RESPONSE, versionData, 8);
 }
 
@@ -382,7 +372,6 @@ static void RS485_HandleGetStatus(const RS485_Packet_t* packet)
     memcpy(&statusData[10], &status.rxPacketCount, 4);
     memcpy(&statusData[14], &status.txPacketCount, 2);
     
-    DEBUG_INFO("STATUS request from 0x%02X", packet->srcAddr);
     RS485_SendResponse(packet->srcAddr, CMD_STATUS_RESPONSE, statusData, 16);
 }
 

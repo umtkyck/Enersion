@@ -21,8 +21,7 @@
 /* Analog Channel Counts */
 #define NUM_420MA_CHANNELS      26
 #define NUM_VOLTAGE_CHANNELS    6
-#define NUM_NTC_CHANNELS        4
-#define TOTAL_ANALOG_CHANNELS   (NUM_420MA_CHANNELS + NUM_VOLTAGE_CHANNELS + NUM_NTC_CHANNELS)
+#define TOTAL_ANALOG_CHANNELS   (NUM_420MA_CHANNELS + NUM_VOLTAGE_CHANNELS)
 
 /* ADC Configuration */
 #define ADC_RESOLUTION          65535.0f    // 16-bit ADC
@@ -39,12 +38,6 @@
 #define VOLTAGE_MIN_V           0.0f
 #define VOLTAGE_MAX_V           10.0f
 #define VOLTAGE_DIVIDER_RATIO   3.03f       // Adjust based on hardware
-
-/* NTC Configuration */
-#define NTC_NOMINAL_RESISTANCE  10000.0f    // 10k NTC at 25°C
-#define NTC_NOMINAL_TEMP        25.0f       // °C
-#define NTC_BETA_COEFFICIENT    3950.0f     // B25/85 coefficient
-#define NTC_SERIES_RESISTOR     10000.0f    // Pull-up resistor
 
 /* Status Codes */
 typedef enum {
@@ -72,19 +65,10 @@ typedef struct {
     AnalogStatus_t status;
 } AnalogVoltage_Channel_t;
 
-/* NTC Data Structure */
-typedef struct {
-    uint16_t raw_adc;
-    float resistance_ohm;
-    float temperature_C;
-    AnalogStatus_t status;
-} NTC_Channel_t;
-
 /* Complete Analog Data Structure */
 typedef struct {
     Analog420_Channel_t analog_420[NUM_420MA_CHANNELS];
     AnalogVoltage_Channel_t analog_voltage[NUM_VOLTAGE_CHANNELS];
-    NTC_Channel_t ntc[NUM_NTC_CHANNELS];
     uint32_t last_update_time;
     uint32_t update_count;
 } AnalogData_t;
@@ -95,22 +79,18 @@ void AnalogInput_Update(void);
 void AnalogInput_StartConversion(void);
 
 /* 4-20mA Functions */
+uint16_t AnalogInput_Get420mA_Raw(uint8_t channel);
 float AnalogInput_Get420mA_Current(uint8_t channel);
 float AnalogInput_Get420mA_Percent(uint8_t channel);
 AnalogStatus_t AnalogInput_Get420mA_Status(uint8_t channel);
 void AnalogInput_GetAll420mA(uint8_t* buffer, uint16_t bufferSize);
 
 /* 0-10V Functions */
+uint16_t AnalogInput_GetVoltage_Raw(uint8_t channel);
 float AnalogInput_GetVoltage_V(uint8_t channel);
 float AnalogInput_GetVoltage_Percent(uint8_t channel);
 AnalogStatus_t AnalogInput_GetVoltage_Status(uint8_t channel);
 void AnalogInput_GetAllVoltage(uint8_t* buffer, uint16_t bufferSize);
-
-/* NTC Functions */
-float AnalogInput_GetNTC_Temperature(uint8_t channel);
-float AnalogInput_GetNTC_Resistance(uint8_t channel);
-AnalogStatus_t AnalogInput_GetNTC_Status(uint8_t channel);
-void AnalogInput_GetAllNTC(uint8_t* buffer, uint16_t bufferSize);
 
 /* Bulk Read */
 void AnalogInput_GetAllData(uint8_t* buffer, uint16_t bufferSize);

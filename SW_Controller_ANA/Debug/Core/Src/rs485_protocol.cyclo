@@ -7,9 +7,9 @@
 ../Core/Src/rs485_protocol.c:226:17:RS485_GetStatus	1
 ../Core/Src/rs485_protocol.c:237:10:RS485_CalculateCRC	4
 ../Core/Src/rs485_protocol.c:260:13:RS485_ProcessPacket	8
-../Core/Src/rs485_protocol.c:324:13:RS485_HandlePing	2
-../Core/Src/rs485_protocol.c:340:13:RS485_HandleGetVersion	1
-../Core/Src/rs485_protocol.c:361:13:RS485_HandleHeartbeat	1
-../Core/Src/rs485_protocol.c:375:13:RS485_HandleGetStatus	1
-../Core/Src/rs485_protocol.c:394:6:HAL_UART_RxCpltCallback	3
-../Core/Src/rs485_protocol.c:415:13:RS485_ProcessReceivedByte	10
+../Core/Src/rs485_protocol.c:321:13:RS485_HandlePing	1
+../Core/Src/rs485_protocol.c:331:13:RS485_HandleGetVersion	1
+../Core/Src/rs485_protocol.c:351:13:RS485_HandleHeartbeat	1
+../Core/Src/rs485_protocol.c:365:13:RS485_HandleGetStatus	1
+../Core/Src/rs485_protocol.c:383:6:HAL_UART_RxCpltCallback	3
+../Core/Src/rs485_protocol.c:404:13:RS485_ProcessReceivedByte	10
