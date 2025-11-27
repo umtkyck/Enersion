@@ -1,3 +1,4 @@
+"./Core/Src/ad4114.o"
 "./Core/Src/analog_input_handler.o"
 "./Core/Src/debug_uart.o"
 "./Core/Src/main.o"

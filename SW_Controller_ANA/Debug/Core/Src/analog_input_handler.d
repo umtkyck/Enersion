@@ -33,7 +33,7 @@ Core/Src/analog_input_handler.o: ../Core/Src/analog_input_handler.c \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spi_ex.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h \
- ../Core/Inc/debug_uart.h
+ ../Core/Inc/ad4114.h ../Core/Inc/debug_uart.h
 ../Core/Inc/analog_input_handler.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h:
@@ -69,4 +69,5 @@ Core/Src/analog_input_handler.o: ../Core/Src/analog_input_handler.c \
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spi_ex.h:
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h:
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h:
+../Core/Inc/ad4114.h:
 ../Core/Inc/debug_uart.h:

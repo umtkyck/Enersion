@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Analog Input Controller - RS485 GUI Application
-Monitors 26x 4-20mA, 6x 0-10V, and 4x NTC inputs via RS485
+Monitors 26x 4-20mA and 6x 0-10V inputs via RS485
+Uses AD4114BCPZ 24-bit Sigma-Delta ADC
 """
 
 import sys
@@ -192,7 +193,7 @@ class MCUWidget(QGroupBox):
         return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 class AnalogInputWidget(QGroupBox):
-    """Widget for displaying 4-20mA, 0-10V, and NTC analog inputs"""
+    """Widget for displaying 4-20mA and 0-10V analog inputs from AD4114 ADC"""
     
     def __init__(self, protocol: RS485Protocol):
         super().__init__("Analog Inputs (Controller 420)")
@@ -601,6 +602,12 @@ class MainWindow(QMainWindow):
         # Stop health monitoring first
         self.stop_health_monitoring()
         
+        # Stop auto-refresh if active
+        if self.analog_widget and self.analog_widget.refresh_timer.isActive():
+            self.analog_widget.refresh_timer.stop()
+            self.analog_widget.auto_refresh_btn.setText("Start Auto-Refresh (1s)")
+            self.analog_widget.auto_refresh_btn.setStyleSheet("background-color: #2196F3; color: white; font-weight: bold; padding: 10px;")
+        
         if self.protocol:
             self.protocol.disconnect()
             self.protocol = None
@@ -612,8 +619,6 @@ class MainWindow(QMainWindow):
         self.refresh_btn.setEnabled(True)
         
         self.mcu_widget.update_connection(False)
-        self.status_label.setText("Disconnected")
-        self.status_label.setStyleSheet("color: red; font-weight: bold;")
         
         self.statusBar().showMessage("Disconnected")
     

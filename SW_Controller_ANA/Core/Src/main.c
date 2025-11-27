@@ -121,27 +121,53 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   
-  /* Initialize hierarchical layers */
+  /* Initialize Debug UART first */
   Debug_Init();
   
   /* Print startup banner */
   Version_GetString(versionString, VERSION_STRING_SIZE);
-  DEBUG_INFO("===========================================");
+  DEBUG_INFO("");
+  DEBUG_INFO("============================================");
+  DEBUG_INFO("  ENERSION ANALOG INPUT CONTROLLER");
   DEBUG_INFO("  %s", versionString);
-  DEBUG_INFO("===========================================");
+  DEBUG_INFO("============================================");
+  DEBUG_INFO("");
+  DEBUG_INFO("[BOOT] System starting...");
+  DEBUG_INFO("[BOOT] MCU: STM32H753ZIT6 @ 200MHz");
+  DEBUG_INFO("[BOOT] RS485 Address: 0x%02X (Controller_420)", RS485_ADDR_CONTROLLER_420);
+  DEBUG_INFO("");
   
-  /* Initialize analog input handler */
+  /* Initialize SPI for AD4114 (Mode 3 reconfiguration done in MX_SPIx_Init) */
+  DEBUG_INFO("[SPI] SPI1 configured for AD4114 #1 (Mode 3, 12.5 MHz)");
+  DEBUG_INFO("[SPI] SPI4 configured for AD4114 #2 (Mode 3, 6.25 MHz)");
+  DEBUG_INFO("");
+  
+  /* Initialize analog input handler (AD4114 ADCs) */
+  DEBUG_INFO("[ADC] Initializing AD4114 ADC devices...");
   AnalogInput_Init();
+  DEBUG_INFO("");
   
   /* Initialize RS485 protocol layer */
+  DEBUG_INFO("[RS485] Initializing RS485 protocol...");
   RS485_Init(RS485_ADDR_CONTROLLER_420);
   
   /* Register analog command handlers */
   RS485_RegisterCommandHandler(CMD_READ_ANALOG_420, HandleRead420mA);
   RS485_RegisterCommandHandler(CMD_READ_ANALOG_VOLTAGE, HandleReadVoltage);
+  DEBUG_INFO("[RS485] Command handlers registered:");
+  DEBUG_INFO("        - CMD_READ_ANALOG_420 (0x%02X)", CMD_READ_ANALOG_420);
+  DEBUG_INFO("        - CMD_READ_ANALOG_VOLTAGE (0x%02X)", CMD_READ_ANALOG_VOLTAGE);
+  DEBUG_INFO("");
   
-  DEBUG_INFO("System initialization complete");
-  DEBUG_INFO("Entering main loop...");
+  DEBUG_INFO("============================================");
+  DEBUG_INFO("  SYSTEM INITIALIZATION COMPLETE");
+  DEBUG_INFO("============================================");
+  DEBUG_INFO("");
+  DEBUG_INFO("[MAIN] Entering main loop...");
+  DEBUG_INFO("[MAIN] Analog update rate: 100ms");
+  DEBUG_INFO("[MAIN] Status LED blink: 500ms");
+  DEBUG_INFO("[MAIN] Heartbeat log: 10s");
+  DEBUG_INFO("");
   
   heartbeatTimer = HAL_GetTick();
   statusLedTimer = HAL_GetTick();
@@ -176,9 +202,13 @@ int main(void)
     if (HAL_GetTick() - heartbeatTimer >= 10000) {
       heartbeatTimer = HAL_GetTick();
       RS485_Status_t* status = RS485_GetStatus();
-      DEBUG_INFO("Heartbeat: Uptime=%lu RX=%lu TX=%lu Err=%lu Health=%d%%", 
+      AnalogData_t* analog = AnalogInput_GetDataStructure();
+      DEBUG_INFO("[HEARTBEAT] Uptime: %lus | RX: %lu | TX: %lu | Err: %lu | Health: %d%%", 
                  status->uptime, status->rxPacketCount, 
                  status->txPacketCount, status->errorCount, status->health);
+      DEBUG_INFO("[HEARTBEAT] ADC Updates: %lu | Last: %lums ago", 
+                 analog->update_count, 
+                 HAL_GetTick() - analog->last_update_time);
     }
     
     /* Small delay to prevent CPU hogging */
@@ -341,7 +371,15 @@ static void MX_SPI1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN SPI1_Init 2 */
-
+  /* Reconfigure SPI1 for AD4114 (SPI Mode 3: CPOL=1, CPHA=1) */
+  /* Also slow down clock for better reliability */
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;  /* Slower clock */
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END SPI1_Init 2 */
 
 }
@@ -389,7 +427,15 @@ static void MX_SPI4_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN SPI4_Init 2 */
-
+  /* Reconfigure SPI4 for AD4114 (SPI Mode 3: CPOL=1, CPHA=1) */
+  /* Also slow down clock for better reliability */
+  hspi4.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi4.Init.CLKPhase = SPI_PHASE_2EDGE;
+  hspi4.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;  /* Slower clock */
+  if (HAL_SPI_Init(&hspi4) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END SPI4_Init 2 */
 
 }

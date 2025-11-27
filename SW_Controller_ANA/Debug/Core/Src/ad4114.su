@@ -1,0 +1,12 @@
+../Core/Src/ad4114.c:19:6:AD4114_CS_Low	16	static
+../Core/Src/ad4114.c:28:6:AD4114_CS_High	16	static
+../Core/Src/ad4114.c:37:19:AD4114_Reset	32	static
+../Core/Src/ad4114.c:54:19:AD4114_WriteRegister	56	static
+../Core/Src/ad4114.c:76:19:AD4114_ReadRegister	56	static
+../Core/Src/ad4114.c:102:19:AD4114_ReadID	24	static
+../Core/Src/ad4114.c:125:19:AD4114_Init	72	static
+../Core/Src/ad4114.c:262:19:AD4114_ConfigureChannel	24	static
+../Core/Src/ad4114.c:276:19:AD4114_EnableChannel	24	static
+../Core/Src/ad4114.c:298:19:AD4114_StartConversion	16	static
+../Core/Src/ad4114.c:310:19:AD4114_ReadData	48	static
+../Core/Src/ad4114.c:343:19:AD4114_ReadChannel	40	static

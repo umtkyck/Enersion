@@ -1,11 +1,12 @@
 /**
  ******************************************************************************
  * @file           : version.h
- * @brief          : Version information for SW_Controller_420
+ * @brief          : Version information for SW_Controller_ANA
  ******************************************************************************
  * @attention
  *
- * All code and comments in English language
+ * Analog Input Controller (26x 4-20mA, 6x 0-10V)
+ * Hardware: 2x AD4114BCPZ 24-bit Sigma-Delta ADC
  *
  ******************************************************************************
  */

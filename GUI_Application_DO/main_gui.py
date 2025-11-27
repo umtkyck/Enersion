@@ -736,16 +736,16 @@ class MainWindow(QMainWindow):
 def main():
     """Main application entry point"""
     try:
-        app = QApplication(sys.argv)
-        
-        # Set application style
-        app.setStyle('Fusion')
-        
-        # Create and show main window
-        window = MainWindow()
-        window.show()
-        
-        sys.exit(app.exec_())
+    app = QApplication(sys.argv)
+    
+    # Set application style
+    app.setStyle('Fusion')
+    
+    # Create and show main window
+    window = MainWindow()
+    window.show()
+    
+    sys.exit(app.exec_())
     except Exception as e:
         print(f"Application error: {e}")
         import traceback

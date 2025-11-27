@@ -65,7 +65,10 @@ void RS485_Init(uint8_t myAddr)
     /* Start receiving in interrupt mode */
     HAL_UART_Receive_IT(&huart2, rxBuffer, 1);
     
-    DEBUG_INFO("RS485 Protocol initialized, Address: 0x%02X", myAddress);
+    DEBUG_INFO("[RS485] Protocol initialized");
+    DEBUG_INFO("[RS485] Address: 0x%02X", myAddress);
+    DEBUG_INFO("[RS485] UART: USART2 @ 115200 baud");
+    DEBUG_INFO("[RS485] Direction Pin: PD4");
 }
 
 /**

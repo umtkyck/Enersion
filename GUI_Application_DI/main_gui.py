@@ -143,18 +143,18 @@ class MCUWidget(QGroupBox):
             self.status_indicator.setStyleSheet("color: green; font-weight: bold;")
             
             if health_data:
-                health = health_data.get('health', 0)
+        health = health_data.get('health', 0)
                 self.health_label.setText(f"{health}%")
-                
-                if health >= 80:
+        
+        if health >= 80:
                     self.health_label.setStyleSheet("color: green; font-weight: bold;")
-                elif health >= 50:
+        elif health >= 50:
                     self.health_label.setStyleSheet("color: orange; font-weight: bold;")
-                else:
+        else:
                     self.health_label.setStyleSheet("color: red; font-weight: bold;")
                 
-                status = health_data.get('status')
-                if status:
+        status = health_data.get('status')
+        if status:
                     self.stats_label.setText(
                         f"TX: {status.get('tx_packets', 0)} | "
                         f"RX: {status.get('rx_packets', 0)} | "
@@ -178,7 +178,7 @@ class DigitalInputWidget(QGroupBox):
         self.protocol = protocol
         self.auto_refresh = False
         self.init_ui()
-        
+    
         # Auto-refresh timer
         self.refresh_timer = QTimer()
         self.refresh_timer.timeout.connect(self.read_inputs)
@@ -303,7 +303,7 @@ class MainWindow(QMainWindow):
         self.target_device_address = RS485_ADDR_CONTROLLER_DIO  # Default: 0x02
         
         try:
-            self.init_ui()
+        self.init_ui()
             self.scan_devices()
         except Exception as e:
             print(f"Warning during initialization: {e}")
@@ -417,7 +417,7 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             print(f"Error scanning COM ports: {e}")
-            self.port_combo.clear()
+        self.port_combo.clear()
             self.port_combo.addItem("Error scanning ports")
             self.connect_btn.setEnabled(False)
     
@@ -715,15 +715,15 @@ class MainWindow(QMainWindow):
 
 def main():
     try:
-        app = QApplication(sys.argv)
-        
-        # Set application style
-        app.setStyle('Fusion')
-        
-        window = MainWindow()
-        window.show()
-        
-        sys.exit(app.exec_())
+    app = QApplication(sys.argv)
+    
+    # Set application style
+    app.setStyle('Fusion')
+    
+    window = MainWindow()
+    window.show()
+    
+    sys.exit(app.exec_())
     except Exception as e:
         print(f"Application error: {e}")
         import traceback

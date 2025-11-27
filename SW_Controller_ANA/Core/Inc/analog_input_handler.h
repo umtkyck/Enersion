@@ -5,10 +5,13 @@
  ******************************************************************************
  * @attention
  *
- * Application Layer for reading analog inputs:
+ * Application Layer for reading analog inputs via AD4114BCPZ:
  * - 26x 4-20mA current loop inputs
  * - 6x 0-10V voltage inputs
- * - 4x NTC temperature sensors
+ *
+ * Hardware: 2x AD4114BCPZ (24-bit Sigma-Delta ADC)
+ * - AD4114 #1 on SPI1: 16 channels (4-20mA CH0-CH15)
+ * - AD4114 #2 on SPI4: 16 channels (4-20mA CH16-CH25 + 0-10V CH0-CH5)
  *
  ******************************************************************************
  */
@@ -23,21 +26,22 @@
 #define NUM_VOLTAGE_CHANNELS    6
 #define TOTAL_ANALOG_CHANNELS   (NUM_420MA_CHANNELS + NUM_VOLTAGE_CHANNELS)
 
-/* ADC Configuration */
-#define ADC_RESOLUTION          65535.0f    // 16-bit ADC
-#define ADC_VREF                3.3f        // Reference voltage (V)
+/* ADC Configuration (AD4114 - 24-bit Sigma-Delta) */
+#define ADC_RESOLUTION_24BIT    16777216.0f // 24-bit (2^24)
+#define ADC_RESOLUTION_16BIT    65536.0f    // 16-bit (2^16) for scaled values
+#define ADC_VREF                2.5f        // AD4114 Internal Reference (V)
 
 /* 4-20mA Configuration */
 #define CURRENT_MIN_MA          4.0f
 #define CURRENT_MAX_MA          20.0f
 #define CURRENT_UNDERRANGE_MA   3.8f        // Wire break detection
 #define CURRENT_OVERRANGE_MA    21.0f
-#define CURRENT_SENSE_RESISTOR  250.0f      // Ohms (typical)
+#define CURRENT_SENSE_RESISTOR  100.0f      // Ohms (check schematic!)
 
 /* 0-10V Configuration */
 #define VOLTAGE_MIN_V           0.0f
 #define VOLTAGE_MAX_V           10.0f
-#define VOLTAGE_DIVIDER_RATIO   3.03f       // Adjust based on hardware
+#define VOLTAGE_DIVIDER_RATIO   4.0f        // 10V → 2.5V (4:1 divider)
 
 /* Status Codes */
 typedef enum {

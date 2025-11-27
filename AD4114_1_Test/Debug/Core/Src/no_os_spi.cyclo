@@ -1,0 +1,5 @@
+../Core/Inc/no_os_alloc.h:17:21:no_os_malloc	1
+../Core/Inc/no_os_alloc.h:37:20:no_os_free	1
+../Core/Src/no_os_spi.c:35:9:no_os_spi_init	5
+../Core/Src/no_os_spi.c:80:9:no_os_spi_remove	2
+../Core/Src/no_os_spi.c:98:9:no_os_spi_write_and_read	5
