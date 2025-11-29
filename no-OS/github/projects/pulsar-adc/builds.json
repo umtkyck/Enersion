@@ -1,0 +1,24 @@
+{
+  "xilinx": {
+    "basic": {
+      "flags": "BASIC_EXAMPLE=y IIO_EXAMPLE=n",
+      "hardware": [
+        "pulsar_adc_zed"
+      ]
+    },
+    "iio": {
+      "flags": "BASIC_EXAMPLE=n IIO_EXAMPLE=y",
+      "hardware": [
+        "pulsar_adc_zed"
+      ]
+    }
+  },
+  "stm32": {
+    "basic": {
+      "flags": "BASIC_EXAMPLE=y IIO_EXAMPLE=n"
+    },
+    "iio": {
+      "flags": "BASIC_EXAMPLE=n IIO_EXAMPLE=y"
+    }
+  }
+}
