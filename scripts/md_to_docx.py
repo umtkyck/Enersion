@@ -240,10 +240,7 @@ def main():
     project_root = os.path.dirname(script_dir)
     
     md_file = os.path.join(project_root, 'LinuxApp', 'PROJECT_STATUS.md')
-    output_file = os.path.join(project_root, 'docs', 'Enersion_Project_Status.docx')
-    
-    # Ensure docs directory exists
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    output_file = os.path.join(project_root, 'Enersion_Project_Status.docx')
     
     if os.path.exists(md_file):
         create_docx_from_markdown(md_file, output_file)
