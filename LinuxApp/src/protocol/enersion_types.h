@@ -208,3 +208,5 @@ static inline void enersion_dio_set_all(enersion_dio_state_t *state)
 
 #endif /* ENERSION_TYPES_H */
 
+
+

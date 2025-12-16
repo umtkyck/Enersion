@@ -42,3 +42,5 @@ private:
 
 #endif // CONNECTION_MODEL_H
 
+
+

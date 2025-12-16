@@ -1,40 +1,55 @@
 /**
  * @file digital_input_model.h
- * @brief Digital Input Model for QML
+ * @brief Digital Input Data Model for QML
  * @version 1.0.0
+ * 
+ * @copyright (c) 2024 Enersion. All rights reserved.
  */
 
 #ifndef DIGITAL_INPUT_MODEL_H
 #define DIGITAL_INPUT_MODEL_H
 
-#include <QAbstractListModel>
+#include <QObject>
 #include <QVector>
+#include <cstdint>
 
-class DiService;
-
-class DigitalInputModel : public QAbstractListModel
+/**
+ * @brief Digital Input Model
+ * 
+ * Manages state of 64 digital input channels for QML binding.
+ */
+class DigitalInputModel : public QObject
 {
     Q_OBJECT
     
+    Q_PROPERTY(int activeCount READ activeCount NOTIFY dataChanged)
+    Q_PROPERTY(bool isPolling READ isPolling NOTIFY pollingChanged)
+    
 public:
-    enum Roles {
-        ChannelRole = Qt::UserRole + 1,
-        StateRole,
-        NameRole
-    };
+    explicit DigitalInputModel(QObject *parent = nullptr);
     
-    explicit DigitalInputModel(DiService *service, QObject *parent = nullptr);
+    // Property getters
+    int activeCount() const;
+    bool isPolling() const;
     
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-    QHash<int, QByteArray> roleNames() const override;
+    // Channel access
+    Q_INVOKABLE bool getChannelState(int channel) const;
     
-public slots:
-    void refresh();
+    // Bulk data access
+    void getStateData(uint8_t *buffer) const;
+    void setStateData(const uint8_t *buffer);
+    
+    // Polling state
+    void setPolling(bool polling);
+    
+signals:
+    void dataChanged();
+    void pollingChanged();
+    void channelChanged(int channel, bool state);
     
 private:
-    DiService *m_service = nullptr;
+    uint8_t m_state[8];  // 64 bits = 8 bytes
+    bool m_isPolling;
 };
 
 #endif // DIGITAL_INPUT_MODEL_H
-

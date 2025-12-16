@@ -1,203 +1,244 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+import ".."
+import "../components"
+
 /**
- * DigitalInputPage.qml - Digital Input Monitor (64 channels)
+ * Digital Input Page - Display 64 Digital Inputs
  */
-
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
-import QtQuick.Controls.Material
-import EnersionApp 1.0
-
-Page {
+Item {
     id: root
     
-    background: Rectangle {
-        color: "#121212"
+    property var model: null
+    
+    // Get channel states from model
+    property var channelStates: {
+        if (!model) return []
+        var states = []
+        for (var i = 0; i < 64; i++) {
+            states.push(model.getChannelState(i))
+        }
+        return states
+    }
+    
+    // Refresh states when model updates
+    Connections {
+        target: model
+        function onDataChanged() {
+            channelStates = Qt.binding(function() {
+                if (!model) return []
+                var states = []
+                for (var i = 0; i < 64; i++) {
+                    states.push(model.getChannelState(i))
+                }
+                return states
+            })
+        }
     }
     
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 16
-        spacing: 16
+        spacing: Style.spacingL
         
-        // Header
+        // === Header ===
         RowLayout {
             Layout.fillWidth: true
-            spacing: 16
+            spacing: Style.spacingL
             
-            Label {
-                text: "📥 Digital Input Monitor"
-                font.pixelSize: 24
-                font.bold: true
-                color: "#00BFA5"
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Style.spacingXS
+                
+                Text {
+                    text: "Digital Input Monitor"
+                    font.pixelSize: Style.fontSizeXL
+                    font.weight: Font.Medium
+                    color: Style.textPrimary
+                }
+                
+                Text {
+                    text: "Real-time status of 64 digital input channels"
+                    font.pixelSize: Style.fontSizeM
+                    color: Style.textSecondary
+                }
+            }
+            
+            // Active count badge
+            Rectangle {
+                Layout.preferredWidth: activeRow.implicitWidth + Style.spacingL
+                Layout.preferredHeight: 44
+                radius: Style.radiusM
+                color: Style.bgCard
+                border.width: 1
+                border.color: Style.border
+                
+                RowLayout {
+                    id: activeRow
+                    anchors.centerIn: parent
+                    spacing: Style.spacingS
+                    
+                    Rectangle {
+                        width: 12
+                        height: 12
+                        radius: 6
+                        color: Style.diActive
+                    }
+                    
+                    Text {
+                        text: (model ? model.activeCount : 0) + " Active"
+                        font.pixelSize: Style.fontSizeM
+                        font.weight: Font.Medium
+                        color: Style.textPrimary
+                    }
+                }
+            }
+            
+            // Refresh indicator
+            Rectangle {
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 44
+                radius: Style.radiusM
+                color: Style.bgCard
+                border.width: 1
+                border.color: Style.border
+                
+                Text {
+                    anchors.centerIn: parent
+                    text: "⟳"
+                    font.pixelSize: Style.fontSizeXL
+                    color: Style.primary
+                    
+                    RotationAnimation on rotation {
+                        running: model ? model.isPolling : false
+                        loops: Animation.Infinite
+                        from: 0
+                        to: 360
+                        duration: 1000
+                    }
+                }
+            }
+        }
+        
+        // === Legend ===
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Style.spacingL
+            
+            RowLayout {
+                spacing: Style.spacingS
+                
+                Rectangle {
+                    width: 20
+                    height: 20
+                    radius: 4
+                    color: Style.diActive
+                }
+                Text {
+                    text: "Input HIGH (Active)"
+                    font.pixelSize: Style.fontSizeS
+                    color: Style.textSecondary
+                }
+            }
+            
+            RowLayout {
+                spacing: Style.spacingS
+                
+                Rectangle {
+                    width: 20
+                    height: 20
+                    radius: 4
+                    color: Style.diInactive
+                    border.width: 1
+                    border.color: Style.border
+                }
+                Text {
+                    text: "Input LOW (Inactive)"
+                    font.pixelSize: Style.fontSizeS
+                    color: Style.textSecondary
+                }
             }
             
             Item { Layout.fillWidth: true }
+        }
+        
+        // === Main Grid ===
+        Card {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             
-            Label {
-                text: "Controller DIO (0x02)"
-                font.pixelSize: 14
-                opacity: 0.6
-            }
-            
-            Rectangle {
-                width: 12
-                height: 12
-                radius: 6
-                color: AppController.deviceManager.diOnline ? "#4CAF50" : "#F44336"
+            Item {
+                anchors.fill: parent
+                
+                DioGrid {
+                    anchors.centerIn: parent
+                    channelStates: root.channelStates
+                    isOutput: false
+                }
             }
         }
         
-        // Control Panel
-        Rectangle {
+        // === Channel Details Bar ===
+        Card {
             Layout.fillWidth: true
-            Layout.preferredHeight: 60
-            radius: 8
-            color: "#2D2D2D"
+            Layout.preferredHeight: 80
             
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: 12
-                spacing: 16
+                spacing: Style.spacingXL
                 
-                Button {
-                    text: "🔄 Read Now"
-                    enabled: AppController.deviceManager.diOnline
-                    highlighted: true
+                // Bank summaries
+                Repeater {
+                    model: 8
                     
-                    Material.background: "#2196F3"
-                    
-                    onClicked: AppController.diService.readInputs()
-                }
-                
-                Button {
-                    text: AppController.diService.autoRefresh ? 
-                          "⏹ Stop Auto" : "▶ Auto Refresh"
-                    enabled: AppController.deviceManager.diOnline
-                    
-                    Material.background: AppController.diService.autoRefresh ? 
-                                        "#F44336" : "#4CAF50"
-                    
-                    onClicked: {
-                        AppController.diService.autoRefresh = !AppController.diService.autoRefresh
-                    }
-                }
-                
-                ComboBox {
-                    id: refreshInterval
-                    model: ["500ms", "1s", "2s", "5s"]
-                    currentIndex: 1
-                    
-                    Material.background: "#3D3D3D"
-                    
-                    onCurrentIndexChanged: {
-                        let intervals = [500, 1000, 2000, 5000]
-                        AppController.diService.refreshInterval = intervals[currentIndex]
-                    }
-                }
-                
-                Item { Layout.fillWidth: true }
-                
-                Label {
-                    text: "Active: " + AppController.diService.activeCount + " / 64"
-                    font.pixelSize: 16
-                    font.bold: true
-                    color: "#26A69A"
-                }
-            }
-        }
-        
-        // Input Grid
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            radius: 8
-            color: "#2D2D2D"
-            
-            ScrollView {
-                anchors.fill: parent
-                anchors.margins: 12
-                contentWidth: availableWidth
-                
-                GridLayout {
-                    columns: 8
-                    rowSpacing: 8
-                    columnSpacing: 8
-                    width: parent.width
-                    
-                    Repeater {
-                        model: 64
+                    ColumnLayout {
+                        spacing: 4
                         
-                        delegate: Rectangle {
-                            width: 100
-                            height: 48
-                            radius: 6
+                        Text {
+                            text: "Bank " + (index + 1)
+                            font.pixelSize: Style.fontSizeS
+                            color: Style.textMuted
+                        }
+                        
+                        RowLayout {
+                            spacing: 2
                             
-                            property bool isActive: index < AppController.diService.inputStates.length ?
-                                                   AppController.diService.inputStates[index] : false
-                            
-                            color: isActive ? "#1B5E20" : "#37474F"
-                            border.color: isActive ? "#4CAF50" : "#546E7A"
-                            border.width: isActive ? 2 : 1
-                            
-                            ColumnLayout {
-                                anchors.centerIn: parent
-                                spacing: 2
+                            Repeater {
+                                model: 8
                                 
-                                Label {
-                                    text: "DI" + index.toString().padStart(2, '0')
-                                    font.pixelSize: 12
-                                    font.bold: true
-                                    Layout.alignment: Qt.AlignHCenter
+                                Rectangle {
+                                    width: 8
+                                    height: 16
+                                    radius: 2
+                                    
+                                    property int channelIdx: parent.parent.parent.modelData * 8 + index
+                                    color: channelStates[channelIdx] ? Style.diActive : Style.diInactive
                                 }
-                                
-                                Label {
-                                    text: isActive ? "HIGH" : "LOW"
-                                    font.pixelSize: 10
-                                    color: isActive ? "#A5D6A7" : "#90A4AE"
-                                    Layout.alignment: Qt.AlignHCenter
-                                }
-                            }
-                            
-                            // Pulse animation when state changes
-                            Behavior on color {
-                                ColorAnimation { duration: 200 }
                             }
                         }
                     }
                 }
-            }
-        }
-        
-        // Status Bar
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 40
-            radius: 8
-            color: "#2D2D2D"
-            
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 12
-                
-                Label {
-                    text: AppController.diService.autoRefresh ? 
-                          "🟢 Auto-refresh active (" + refreshInterval.currentText + ")" :
-                          "Manual refresh mode"
-                    font.pixelSize: 12
-                    opacity: 0.8
-                }
                 
                 Item { Layout.fillWidth: true }
                 
-                Label {
-                    text: "Health: " + AppController.deviceManager.diControllerHealth + "%"
-                    font.pixelSize: 12
-                    color: AppController.deviceManager.diControllerHealth > 80 ? "#4CAF50" :
-                           AppController.deviceManager.diControllerHealth > 50 ? "#FF9800" : "#F44336"
+                // Poll rate
+                ColumnLayout {
+                    spacing: 4
+                    
+                    Text {
+                        text: "Poll Rate"
+                        font.pixelSize: Style.fontSizeS
+                        color: Style.textMuted
+                    }
+                    
+                    Text {
+                        text: "100 ms"
+                        font.pixelSize: Style.fontSizeM
+                        font.weight: Font.Medium
+                        color: Style.textPrimary
+                    }
                 }
             }
         }
     }
 }
-

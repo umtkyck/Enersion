@@ -1,60 +1,91 @@
 /**
  * @file digital_input_model.cpp
- * @brief Digital Input Model Implementation
+ * @brief Digital Input Data Model Implementation
+ * @version 1.0.0
+ * 
+ * @copyright (c) 2024 Enersion. All rights reserved.
  */
 
 #include "digital_input_model.h"
-#include "di_service.h"
+#include <cstring>
 
-DigitalInputModel::DigitalInputModel(DiService *service, QObject *parent)
-    : QAbstractListModel(parent)
-    , m_service(service)
+DigitalInputModel::DigitalInputModel(QObject *parent)
+    : QObject(parent)
+    , m_isPolling(false)
 {
-    if (m_service) {
-        connect(m_service, &DiService::inputStatesChanged,
-                this, &DigitalInputModel::refresh);
-    }
+    std::memset(m_state, 0, sizeof(m_state));
 }
 
-int DigitalInputModel::rowCount(const QModelIndex &parent) const
+int DigitalInputModel::activeCount() const
 {
-    if (parent.isValid()) {
-        return 0;
+    int count = 0;
+    for (int i = 0; i < 64; i++) {
+        if (getChannelState(i)) {
+            count++;
+        }
     }
-    return DiService::CHANNEL_COUNT;
+    return count;
 }
 
-QVariant DigitalInputModel::data(const QModelIndex &index, int role) const
+bool DigitalInputModel::isPolling() const
 {
-    if (!index.isValid() || index.row() >= DiService::CHANNEL_COUNT) {
-        return QVariant();
+    return m_isPolling;
+}
+
+bool DigitalInputModel::getChannelState(int channel) const
+{
+    if (channel < 0 || channel >= 64) {
+        return false;
     }
     
-    int channel = index.row();
+    int byteIdx = channel / 8;
+    int bitIdx = channel % 8;
     
-    switch (role) {
-    case ChannelRole:
-        return channel;
-    case StateRole:
-        return m_service ? m_service->getInput(channel) : false;
-    case NameRole:
-        return QString("DI%1").arg(channel, 2, 10, QChar('0'));
-    default:
-        return QVariant();
+    return (m_state[byteIdx] & (1 << bitIdx)) != 0;
+}
+
+void DigitalInputModel::getStateData(uint8_t *buffer) const
+{
+    if (buffer) {
+        std::memcpy(buffer, m_state, sizeof(m_state));
     }
 }
 
-QHash<int, QByteArray> DigitalInputModel::roleNames() const
+void DigitalInputModel::setStateData(const uint8_t *buffer)
 {
-    return {
-        { ChannelRole, "channel" },
-        { StateRole, "state" },
-        { NameRole, "name" }
-    };
+    if (!buffer) {
+        return;
+    }
+    
+    bool changed = false;
+    
+    for (int i = 0; i < 8; i++) {
+        if (m_state[i] != buffer[i]) {
+            changed = true;
+            
+            // Emit individual channel changes
+            for (int bit = 0; bit < 8; bit++) {
+                bool oldState = (m_state[i] & (1 << bit)) != 0;
+                bool newState = (buffer[i] & (1 << bit)) != 0;
+                
+                if (oldState != newState) {
+                    emit channelChanged(i * 8 + bit, newState);
+                }
+            }
+            
+            m_state[i] = buffer[i];
+        }
+    }
+    
+    if (changed) {
+        emit dataChanged();
+    }
 }
 
-void DigitalInputModel::refresh()
+void DigitalInputModel::setPolling(bool polling)
 {
-    emit dataChanged(index(0), index(DiService::CHANNEL_COUNT - 1));
+    if (m_isPolling != polling) {
+        m_isPolling = polling;
+        emit pollingChanged();
+    }
 }
-

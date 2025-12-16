@@ -10,6 +10,7 @@
 #define _GNU_SOURCE
 
 #include "rs485_serial.h"
+#include "rs485_gpio.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -279,6 +280,11 @@ rs485_error_t rs485_open(rs485_handle_t handle)
         /* Already open */
         result = RS485_OK;
     } else {
+        /* Initialize GPIO direction control for MYIR board RS485 */
+        if (ctx->config.rs485_mode) {
+            (void)rs485_gpio_init();
+        }
+        
         /* Open serial port */
         ctx->fd = open(ctx->device, O_RDWR | O_NOCTTY | O_NONBLOCK);
         if (ctx->fd < 0) {
@@ -318,6 +324,11 @@ rs485_error_t rs485_close(rs485_handle_t handle)
     } else if (!ctx->is_open) {
         result = RS485_ERR_NOT_OPEN;
     } else {
+        /* Set to receive mode before closing */
+        if (ctx->config.rs485_mode) {
+            (void)rs485_gpio_rx_enable();
+        }
+        
         /* Restore original termios */
         if (ctx->termios_saved) {
             (void)tcsetattr(ctx->fd, TCSANOW, &ctx->original_termios);
@@ -326,6 +337,11 @@ rs485_error_t rs485_close(rs485_handle_t handle)
         (void)close(ctx->fd);
         ctx->fd = -1;
         ctx->is_open = false;
+        
+        /* Deinitialize GPIO */
+        if (ctx->config.rs485_mode) {
+            (void)rs485_gpio_deinit();
+        }
     }
     
     return result;
@@ -359,6 +375,12 @@ rs485_error_t rs485_write(rs485_handle_t handle,
     } else if (length == 0U) {
         *written = 0U;
     } else {
+        /* Enable TX mode for RS485 (GPIO HIGH) */
+        if (ctx->config.rs485_mode) {
+            (void)rs485_gpio_tx_enable();
+            usleep(100);  /* Small delay for GPIO to settle */
+        }
+        
         /* Write data */
         ssize_t total = 0;
         size_t remaining = length;
@@ -382,9 +404,23 @@ rs485_error_t rs485_write(rs485_handle_t handle,
         }
         
         if (result == RS485_OK) {
+            /* Wait for transmission to complete */
+            (void)tcdrain(ctx->fd);
+            
+            /* Switch back to RX mode (GPIO LOW) */
+            if (ctx->config.rs485_mode) {
+                usleep(100);  /* Small delay after last byte */
+                (void)rs485_gpio_rx_enable();
+            }
+            
             *written = (size_t)total;
             ctx->stats.bytes_sent += (uint64_t)total;
             ctx->stats.tx_count++;
+        } else {
+            /* On error, ensure RX mode */
+            if (ctx->config.rs485_mode) {
+                (void)rs485_gpio_rx_enable();
+            }
         }
     }
     

@@ -1,41 +1,51 @@
 /**
  * @file digital_output_model.h
- * @brief Digital Output Model for QML
+ * @brief Digital Output Data Model for QML
  * @version 1.0.0
+ * 
+ * @copyright (c) 2024 Enersion. All rights reserved.
  */
 
 #ifndef DIGITAL_OUTPUT_MODEL_H
 #define DIGITAL_OUTPUT_MODEL_H
 
-#include <QAbstractListModel>
+#include <QObject>
+#include <cstdint>
 
-class DoService;
-
-class DigitalOutputModel : public QAbstractListModel
+/**
+ * @brief Digital Output Model
+ * 
+ * Manages state of 64 digital output channels for QML binding.
+ */
+class DigitalOutputModel : public QObject
 {
     Q_OBJECT
     
+    Q_PROPERTY(int activeCount READ activeCount NOTIFY dataChanged)
+    
 public:
-    enum Roles {
-        ChannelRole = Qt::UserRole + 1,
-        StateRole,
-        NameRole
-    };
+    explicit DigitalOutputModel(QObject *parent = nullptr);
     
-    explicit DigitalOutputModel(DoService *service, QObject *parent = nullptr);
+    // Property getters
+    int activeCount() const;
     
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
-    Qt::ItemFlags flags(const QModelIndex &index) const override;
-    QHash<int, QByteArray> roleNames() const override;
+    // Channel access
+    Q_INVOKABLE bool getChannelState(int channel) const;
+    void setChannelState(int channel, bool state);
     
-public slots:
-    void refresh();
+    // Bulk operations
+    void setAllChannels(bool state);
+    
+    // Bulk data access
+    void getStateData(uint8_t *buffer) const;
+    void setStateData(const uint8_t *buffer);
+    
+signals:
+    void dataChanged();
+    void channelChanged(int channel, bool state);
     
 private:
-    DoService *m_service = nullptr;
+    uint8_t m_state[8];  // 64 bits = 8 bytes
 };
 
 #endif // DIGITAL_OUTPUT_MODEL_H
-

@@ -1,9 +1,10 @@
 /**
  * @file main.cpp
- * @brief Enersion GUI Application Entry Point
+ * @brief Enersion Control System - Application Entry Point
  * @version 1.0.0
  * 
- * Target: STM32MP257 MYIR Board with HDMI Touchscreen
+ * Qt/QML Application for STM32MP257 MYIR touchscreen.
+ * Controls 64 Digital Inputs and 64 Digital Outputs via RS485.
  * 
  * @copyright (c) 2024 Enersion. All rights reserved.
  */
@@ -17,68 +18,69 @@
 #include <QDebug>
 
 #include "app_controller.h"
-#include "device_manager.h"
-#include "di_service.h"
-#include "do_service.h"
+#include "models/digital_input_model.h"
+#include "models/digital_output_model.h"
 
 int main(int argc, char *argv[])
 {
-    // Enable high DPI scaling for touchscreen
-    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
-        Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+    // Enable high DPI scaling
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     
+    // Create application
     QGuiApplication app(argc, argv);
     
-    // Application metadata
+    // Application info
     app.setOrganizationName("Enersion");
     app.setOrganizationDomain("enersion.com");
-    app.setApplicationName("Enersion Controller");
+    app.setApplicationName("Enersion Control System");
     app.setApplicationVersion("1.0.0");
     
-    // Set Qt Quick Controls style
-    QQuickStyle::setStyle("Material");
+    // Set default style
+    QQuickStyle::setStyle("Basic");
     
-    // Load custom fonts
-    int fontId = QFontDatabase::addApplicationFont(":/fonts/Inter-Regular.ttf");
-    if (fontId >= 0) {
+    // Load custom fonts if available
+    int fontId = QFontDatabase::addApplicationFont(":/fonts/Roboto-Regular.ttf");
+    if (fontId != -1) {
         QStringList fontFamilies = QFontDatabase::applicationFontFamilies(fontId);
         if (!fontFamilies.isEmpty()) {
             QFont defaultFont(fontFamilies.first());
-            defaultFont.setPointSize(12);
+            defaultFont.setPixelSize(14);
             app.setFont(defaultFont);
         }
     }
     
-    // Register QML types
-    qmlRegisterSingletonType<AppController>("EnersionApp", 1, 0, "AppController",
-        &AppController::create);
-    qmlRegisterUncreatableType<DeviceManager>("EnersionApp", 1, 0, "DeviceManager",
-        "Access through AppController.deviceManager");
-    qmlRegisterUncreatableType<DiService>("EnersionApp", 1, 0, "DiService",
-        "Access through AppController.diService");
-    qmlRegisterUncreatableType<DoService>("EnersionApp", 1, 0, "DoService",
-        "Access through AppController.doService");
+    // Create main controller
+    AppController appController;
     
     // Create QML engine
     QQmlApplicationEngine engine;
     
-    // Load main QML file
-    const QUrl url(QStringLiteral("qrc:/EnersionApp/qml/main.qml"));
+    // Register context properties
+    QQmlContext *context = engine.rootContext();
+    context->setContextProperty("appController", &appController);
+    context->setContextProperty("diModel", appController.diModel());
+    context->setContextProperty("doModel", appController.doModel());
     
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
-                     &app, []() { QCoreApplication::exit(-1); },
-                     Qt::QueuedConnection);
+    // Add QML import path
+    engine.addImportPath("qrc:/");
+    engine.addImportPath(":/ui/qml");
+    
+    // Load main QML file
+    const QUrl url(QStringLiteral("qrc:/ui/qml/main.qml"));
+    
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject *obj, const QUrl &objUrl) {
+        if (!obj && url == objUrl) {
+            qCritical() << "Failed to load QML";
+            QCoreApplication::exit(-1);
+        }
+    }, Qt::QueuedConnection);
     
     engine.load(url);
     
-    if (engine.rootObjects().isEmpty()) {
-        qCritical() << "Failed to load QML";
-        return -1;
-    }
-    
-    qDebug() << "Enersion Controller started";
-    qDebug() << "Version:" << app.applicationVersion();
+    qInfo() << "Enersion Control System started";
+    qInfo() << "Target: MYIR STM32MP257";
+    qInfo() << "RS485: /dev/ttySTM9 @ 115200";
     
     return app.exec();
 }
-

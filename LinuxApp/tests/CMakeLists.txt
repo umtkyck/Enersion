@@ -42,3 +42,5 @@ target_link_libraries(test_service PRIVATE
 
 add_test(NAME ServiceTests COMMAND test_service)
 
+
+

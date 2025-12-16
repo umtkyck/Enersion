@@ -130,8 +130,9 @@ QStringList DeviceManager::availablePorts() const
         ports.append(QString("%1 - %2").arg(info.portName(), info.description()));
     }
     
-    // Add common STM32MP2 ports for embedded target
+    // Add MYIR STM32MP257 RS485 port as default
     if (ports.isEmpty()) {
+        ports.append("/dev/ttySTM9 - RS485 (J2 Connector)");
         ports.append("/dev/ttySTM0 - STM32 UART");
         ports.append("/dev/ttySTM1 - STM32 UART");
         ports.append("/dev/ttyUSB0 - USB Serial");

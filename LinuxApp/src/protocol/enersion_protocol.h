@@ -245,3 +245,5 @@ const char *enersion_device_name(enersion_addr_t addr);
 
 #endif /* ENERSION_PROTOCOL_H */
 
+
+

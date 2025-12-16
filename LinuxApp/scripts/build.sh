@@ -122,3 +122,5 @@ if [ "$TARGET" == "stm32mp257" ]; then
     echo "  scp $BUILD_DIR/enersion_gui root@<target-ip>:/usr/bin/"
 fi
 
+
+

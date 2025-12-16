@@ -26,6 +26,9 @@ extern "C" {
 #define RS485_DEFAULT_BAUDRATE      (115200U)
 #define RS485_DEFAULT_TIMEOUT_MS    (1000U)
 
+/* MYIR STM32MP257 RS485 Device */
+#define RS485_DEVICE_DEFAULT        "/dev/ttySTM9"  /**< RS485 on J2 connector */
+
 /* ============================================================================
  * Error Codes - MISRA C:2012 Rule 10.1: Avoid implicit conversions
  * ============================================================================ */

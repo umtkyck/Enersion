@@ -339,3 +339,5 @@ void TestProtocol::testErrorString_invalidCode()
 QTEST_MAIN(TestProtocol)
 #include "test_protocol.moc"
 
+
+

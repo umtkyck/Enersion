@@ -1,259 +1,455 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+import ".."
+import "../components"
+
 /**
- * SettingsPage.qml - Application Settings
+ * Settings Page - Connection and System Configuration
  */
-
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
-import QtQuick.Controls.Material
-import EnersionApp 1.0
-
-Page {
+Item {
     id: root
     
-    background: Rectangle {
-        color: "#121212"
-    }
+    property var controller: null
+    
+    signal connect(string port, int baudrate)
+    signal disconnect()
+    
+    property bool isConnected: controller ? controller.isConnected : false
+    
+    // Available ports (populated from controller)
+    property var availablePorts: controller ? controller.availablePorts : [
+        "/dev/ttySTM9 - RS485 (J2 Connector)",
+        "/dev/ttySTM0 - STM32 UART",
+        "/dev/ttyUSB0 - USB Serial"
+    ]
+    
+    // Available baud rates
+    property var baudRates: [9600, 19200, 38400, 57600, 115200, 230400, 460800]
+    
+    // Selected values
+    property string selectedPort: "/dev/ttySTM9"
+    property int selectedBaudrate: 115200
     
     ScrollView {
         anchors.fill: parent
-        anchors.margins: 16
         contentWidth: availableWidth
+        clip: true
         
         ColumnLayout {
             width: parent.width
-            spacing: 16
+            spacing: Style.spacingL
             
-            // Header
-            Label {
-                text: "⚙️ Settings"
-                font.pixelSize: 24
-                font.bold: true
-                color: "#00BFA5"
-            }
-            
-            // About Section
-            Rectangle {
+            // === Connection Section ===
+            Card {
                 Layout.fillWidth: true
-                Layout.preferredHeight: aboutContent.height + 32
-                radius: 12
-                color: "#2D2D2D"
+                Layout.preferredHeight: 280
+                title: "Connection Settings"
+                icon: "🔌"
                 
                 ColumnLayout {
-                    id: aboutContent
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: 16
-                    spacing: 12
+                    anchors.fill: parent
+                    spacing: Style.spacingL
                     
-                    Label {
-                        text: "About"
-                        font.pixelSize: 16
-                        font.bold: true
-                        color: "#00BFA5"
-                    }
-                    
-                    GridLayout {
-                        columns: 2
-                        columnSpacing: 16
-                        rowSpacing: 8
+                    // Status Banner
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+                        radius: Style.radiusM
+                        color: isConnected ? Qt.rgba(0, 0.9, 0.46, 0.1) : Qt.rgba(1, 0.32, 0.32, 0.1)
+                        border.width: 1
+                        border.color: isConnected ? Style.success : Style.error
                         
-                        Label { text: "Application:"; opacity: 0.6 }
-                        Label { text: "Enersion Controller"; font.bold: true }
-                        
-                        Label { text: "Version:"; opacity: 0.6 }
-                        Label { text: "v" + AppController.appVersion; font.bold: true }
-                        
-                        Label { text: "Target:"; opacity: 0.6 }
-                        Label { text: "STM32MP257 MYIR Board"; font.bold: true }
-                        
-                        Label { text: "Display:"; opacity: 0.6 }
-                        Label { text: "HDMI Touchscreen"; font.bold: true }
-                        
-                        Label { text: "Protocol:"; opacity: 0.6 }
-                        Label { text: "Enersion RS485"; font.bold: true }
-                    }
-                }
-            }
-            
-            // Communication Settings
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: commContent.height + 32
-                radius: 12
-                color: "#2D2D2D"
-                
-                ColumnLayout {
-                    id: commContent
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: 16
-                    spacing: 12
-                    
-                    Label {
-                        text: "Communication"
-                        font.pixelSize: 16
-                        font.bold: true
-                        color: "#00BFA5"
-                    }
-                    
-                    GridLayout {
-                        columns: 2
-                        columnSpacing: 16
-                        rowSpacing: 12
-                        
-                        Label { text: "Response Timeout:" }
-                        SpinBox {
-                            from: 100
-                            to: 5000
-                            stepSize: 100
-                            value: 500
-                            editable: true
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: Style.spacingM
                             
-                            Material.background: "#3D3D3D"
-                            
-                            textFromValue: function(value) { return value + " ms" }
-                        }
-                        
-                        Label { text: "Retry Count:" }
-                        SpinBox {
-                            from: 0
-                            to: 10
-                            value: 3
-                            
-                            Material.background: "#3D3D3D"
-                        }
-                        
-                        Label { text: "Heartbeat Interval:" }
-                        ComboBox {
-                            model: ["1 second", "2 seconds", "5 seconds", "10 seconds"]
-                            currentIndex: 1
-                            
-                            Material.background: "#3D3D3D"
-                        }
-                    }
-                }
-            }
-            
-            // Device Addresses
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: addrContent.height + 32
-                radius: 12
-                color: "#2D2D2D"
-                
-                ColumnLayout {
-                    id: addrContent
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: 16
-                    spacing: 12
-                    
-                    Label {
-                        text: "Device Addresses"
-                        font.pixelSize: 16
-                        font.bold: true
-                        color: "#00BFA5"
-                    }
-                    
-                    GridLayout {
-                        columns: 3
-                        columnSpacing: 16
-                        rowSpacing: 8
-                        
-                        Label { text: "Device"; font.bold: true }
-                        Label { text: "Address"; font.bold: true }
-                        Label { text: "Status"; font.bold: true }
-                        
-                        Label { text: "Master (Linux)" }
-                        Label { text: "0x10"; font.family: "monospace" }
-                        Label { text: "—"; opacity: 0.6 }
-                        
-                        Label { text: "Controller DIO" }
-                        Label { text: "0x02"; font.family: "monospace" }
-                        Row {
-                            spacing: 6
                             Rectangle {
-                                width: 10; height: 10; radius: 5
-                                color: AppController.deviceManager.diOnline ? "#4CAF50" : "#F44336"
-                                anchors.verticalCenter: parent.verticalCenter
+                                width: 12
+                                height: 12
+                                radius: 6
+                                color: isConnected ? Style.success : Style.error
                             }
-                            Label { 
-                                text: AppController.deviceManager.diOnline ? "Online" : "Offline"
-                                anchors.verticalCenter: parent.verticalCenter
+                            
+                            Text {
+                                text: isConnected ? "Connected to RS485 Device" : "Not Connected"
+                                font.pixelSize: Style.fontSizeM
+                                font.weight: Font.Medium
+                                color: isConnected ? Style.success : Style.error
+                            }
+                            
+                            Item { Layout.fillWidth: true }
+                            
+                            Text {
+                                visible: isConnected
+                                text: selectedPort + " @ " + selectedBaudrate
+                                font.pixelSize: Style.fontSizeS
+                                color: Style.textSecondary
+                            }
+                        }
+                    }
+                    
+                    // Port and Baudrate Row
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Style.spacingL
+                        
+                        // Port Selection
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Style.spacingS
+                            
+                            Text {
+                                text: "Serial Port"
+                                font.pixelSize: Style.fontSizeS
+                                font.weight: Font.Medium
+                                color: Style.textSecondary
+                            }
+                            
+                            ComboBox {
+                                id: portCombo
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Style.inputHeight
+                                
+                                model: availablePorts
+                                currentIndex: 0
+                                enabled: !isConnected
+                                
+                                background: Rectangle {
+                                    color: Style.bgInput
+                                    radius: Style.radiusM
+                                    border.width: 1
+                                    border.color: portCombo.activeFocus ? Style.primary : Style.border
+                                }
+                                
+                                contentItem: Text {
+                                    text: portCombo.displayText
+                                    font.pixelSize: Style.fontSizeM
+                                    color: Style.textPrimary
+                                    verticalAlignment: Text.AlignVCenter
+                                    leftPadding: Style.spacingM
+                                }
+                                
+                                onCurrentTextChanged: {
+                                    selectedPort = currentText.split(" - ")[0]
+                                }
                             }
                         }
                         
-                        Label { text: "Controller OUT" }
-                        Label { text: "0x03"; font.family: "monospace" }
-                        Row {
-                            spacing: 6
-                            Rectangle {
-                                width: 10; height: 10; radius: 5
-                                color: AppController.deviceManager.doOnline ? "#4CAF50" : "#F44336"
-                                anchors.verticalCenter: parent.verticalCenter
+                        // Baudrate Selection
+                        ColumnLayout {
+                            Layout.preferredWidth: 200
+                            spacing: Style.spacingS
+                            
+                            Text {
+                                text: "Baud Rate"
+                                font.pixelSize: Style.fontSizeS
+                                font.weight: Font.Medium
+                                color: Style.textSecondary
                             }
-                            Label { 
-                                text: AppController.deviceManager.doOnline ? "Online" : "Offline"
-                                anchors.verticalCenter: parent.verticalCenter
+                            
+                            ComboBox {
+                                id: baudrateCombo
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Style.inputHeight
+                                
+                                model: baudRates
+                                currentIndex: 4  // 115200
+                                enabled: !isConnected
+                                
+                                background: Rectangle {
+                                    color: Style.bgInput
+                                    radius: Style.radiusM
+                                    border.width: 1
+                                    border.color: baudrateCombo.activeFocus ? Style.primary : Style.border
+                                }
+                                
+                                contentItem: Text {
+                                    text: baudrateCombo.displayText
+                                    font.pixelSize: Style.fontSizeM
+                                    color: Style.textPrimary
+                                    verticalAlignment: Text.AlignVCenter
+                                    leftPadding: Style.spacingM
+                                }
+                                
+                                onCurrentTextChanged: {
+                                    selectedBaudrate = parseInt(currentText)
+                                }
                             }
                         }
+                    }
+                    
+                    // Connect/Disconnect Button
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Style.spacingM
+                        
+                        PrimaryButton {
+                            Layout.preferredWidth: 160
+                            text: isConnected ? "Disconnect" : "Connect"
+                            icon: isConnected ? "✕" : "→"
+                            destructive: isConnected
+                            
+                            onClicked: {
+                                if (isConnected) {
+                                    disconnect()
+                                } else {
+                                    connect(selectedPort, selectedBaudrate)
+                                }
+                            }
+                        }
+                        
+                        PrimaryButton {
+                            text: "Refresh Ports"
+                            icon: "⟳"
+                            outline: true
+                            enabled: !isConnected
+                            
+                            onClicked: {
+                                if (controller) {
+                                    controller.refreshPorts()
+                                }
+                            }
+                        }
+                        
+                        Item { Layout.fillWidth: true }
                     }
                 }
             }
             
-            // System Info
-            Rectangle {
+            // === Device Information ===
+            Card {
                 Layout.fillWidth: true
-                Layout.preferredHeight: sysContent.height + 32
-                radius: 12
-                color: "#2D2D2D"
+                Layout.preferredHeight: 200
+                title: "Device Information"
+                icon: "ℹ"
                 
-                ColumnLayout {
-                    id: sysContent
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: 16
-                    spacing: 12
+                GridLayout {
+                    anchors.fill: parent
+                    columns: 3
+                    rowSpacing: Style.spacingM
+                    columnSpacing: Style.spacingXL
                     
-                    Label {
-                        text: "System Information"
-                        font.pixelSize: 16
-                        font.bold: true
-                        color: "#00BFA5"
-                    }
-                    
-                    GridLayout {
-                        columns: 2
-                        columnSpacing: 16
-                        rowSpacing: 8
+                    Repeater {
+                        model: [
+                            { label: "Board", value: "MYIR STM32MP257" },
+                            { label: "RS485 Port", value: "/dev/ttySTM9" },
+                            { label: "GPIO (Direction)", value: "PI10 (138)" },
+                            { label: "DI Controller", value: "Address 0x02" },
+                            { label: "DO Controller", value: "Address 0x03" },
+                            { label: "Protocol", value: "Enersion v1.0" },
+                            { label: "Firmware", value: controller && isConnected ? controller.firmwareVersion : "N/A" },
+                            { label: "Uptime", value: controller && isConnected ? controller.uptime : "N/A" },
+                            { label: "Errors", value: controller && isConnected ? controller.errorCount : "0" }
+                        ]
                         
-                        Label { text: "Qt Version:"; opacity: 0.6 }
-                        Label { text: "6.x"; font.bold: true }
-                        
-                        Label { text: "Architecture:"; opacity: 0.6 }
-                        Label { text: Qt.platform.os; font.bold: true }
-                        
-                        Label { text: "Screen Size:"; opacity: 0.6 }
-                        Label { text: Screen.width + " x " + Screen.height; font.bold: true }
+                        ColumnLayout {
+                            spacing: 4
+                            
+                            Text {
+                                text: modelData.label
+                                font.pixelSize: Style.fontSizeS
+                                color: Style.textMuted
+                            }
+                            
+                            Text {
+                                text: modelData.value
+                                font.pixelSize: Style.fontSizeM
+                                font.weight: Font.Medium
+                                color: Style.textPrimary
+                            }
+                        }
                     }
                 }
             }
             
-            Item { Layout.fillHeight: true }
-            
-            // Copyright
-            Label {
-                text: "© 2024 Enersion. All rights reserved."
-                font.pixelSize: 12
-                opacity: 0.4
-                Layout.alignment: Qt.AlignHCenter
+            // === Polling Settings ===
+            Card {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 140
+                title: "Polling Settings"
+                icon: "⏱"
+                
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: Style.spacingXL
+                    
+                    ColumnLayout {
+                        spacing: Style.spacingS
+                        
+                        Text {
+                            text: "DI Poll Interval"
+                            font.pixelSize: Style.fontSizeS
+                            font.weight: Font.Medium
+                            color: Style.textSecondary
+                        }
+                        
+                        RowLayout {
+                            spacing: Style.spacingS
+                            
+                            Slider {
+                                id: diPollSlider
+                                Layout.preferredWidth: 200
+                                from: 50
+                                to: 1000
+                                stepSize: 50
+                                value: 100
+                                
+                                background: Rectangle {
+                                    x: diPollSlider.leftPadding
+                                    y: diPollSlider.topPadding + diPollSlider.availableHeight / 2 - height / 2
+                                    width: diPollSlider.availableWidth
+                                    height: 4
+                                    radius: 2
+                                    color: Style.bgInput
+                                    
+                                    Rectangle {
+                                        width: diPollSlider.visualPosition * parent.width
+                                        height: parent.height
+                                        color: Style.primary
+                                        radius: 2
+                                    }
+                                }
+                                
+                                handle: Rectangle {
+                                    x: diPollSlider.leftPadding + diPollSlider.visualPosition * (diPollSlider.availableWidth - width)
+                                    y: diPollSlider.topPadding + diPollSlider.availableHeight / 2 - height / 2
+                                    width: 20
+                                    height: 20
+                                    radius: 10
+                                    color: Style.primary
+                                }
+                            }
+                            
+                            Text {
+                                text: diPollSlider.value + " ms"
+                                font.pixelSize: Style.fontSizeM
+                                font.family: "monospace"
+                                color: Style.textPrimary
+                            }
+                        }
+                    }
+                    
+                    ColumnLayout {
+                        spacing: Style.spacingS
+                        
+                        Text {
+                            text: "DO Sync Interval"
+                            font.pixelSize: Style.fontSizeS
+                            font.weight: Font.Medium
+                            color: Style.textSecondary
+                        }
+                        
+                        RowLayout {
+                            spacing: Style.spacingS
+                            
+                            Slider {
+                                id: doPollSlider
+                                Layout.preferredWidth: 200
+                                from: 50
+                                to: 1000
+                                stepSize: 50
+                                value: 200
+                                
+                                background: Rectangle {
+                                    x: doPollSlider.leftPadding
+                                    y: doPollSlider.topPadding + doPollSlider.availableHeight / 2 - height / 2
+                                    width: doPollSlider.availableWidth
+                                    height: 4
+                                    radius: 2
+                                    color: Style.bgInput
+                                    
+                                    Rectangle {
+                                        width: doPollSlider.visualPosition * parent.width
+                                        height: parent.height
+                                        color: Style.doActive
+                                        radius: 2
+                                    }
+                                }
+                                
+                                handle: Rectangle {
+                                    x: doPollSlider.leftPadding + doPollSlider.visualPosition * (doPollSlider.availableWidth - width)
+                                    y: doPollSlider.topPadding + doPollSlider.availableHeight / 2 - height / 2
+                                    width: 20
+                                    height: 20
+                                    radius: 10
+                                    color: Style.doActive
+                                }
+                            }
+                            
+                            Text {
+                                text: doPollSlider.value + " ms"
+                                font.pixelSize: Style.fontSizeM
+                                font.family: "monospace"
+                                color: Style.textPrimary
+                            }
+                        }
+                    }
+                    
+                    Item { Layout.fillWidth: true }
+                    
+                    PrimaryButton {
+                        text: "Apply"
+                        icon: "✓"
+                        
+                        onClicked: {
+                            if (controller) {
+                                controller.setDiPollInterval(diPollSlider.value)
+                                controller.setDoPollInterval(doPollSlider.value)
+                            }
+                        }
+                    }
+                }
             }
+            
+            // === About ===
+            Card {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 100
+                title: "About"
+                icon: "⚡"
+                
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: Style.spacingL
+                    
+                    Text {
+                        text: "Enersion Control System"
+                        font.pixelSize: Style.fontSizeL
+                        font.weight: Font.Bold
+                        color: Style.primary
+                    }
+                    
+                    Text {
+                        text: "v1.0.0"
+                        font.pixelSize: Style.fontSizeM
+                        color: Style.textSecondary
+                    }
+                    
+                    Rectangle {
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: 20
+                        color: Style.border
+                    }
+                    
+                    Text {
+                        text: "Industrial Digital I/O Control for MYIR STM32MP257"
+                        font.pixelSize: Style.fontSizeM
+                        color: Style.textSecondary
+                    }
+                    
+                    Item { Layout.fillWidth: true }
+                    
+                    Text {
+                        text: "© 2024 Enersion"
+                        font.pixelSize: Style.fontSizeS
+                        color: Style.textMuted
+                    }
+                }
+            }
+            
+            // Spacer
+            Item { Layout.preferredHeight: Style.spacingL }
         }
     }
 }
-

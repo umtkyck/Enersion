@@ -78,3 +78,5 @@ QString ConnectionModel::getPortName(int index) const
     return QString();
 }
 
+
+

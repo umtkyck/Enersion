@@ -189,3 +189,5 @@ const char *rs485_error_string(rs485_error_t error);
 
 #endif /* RS485_SERIAL_H */
 
+
+

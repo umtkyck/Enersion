@@ -1,0 +1,15 @@
+module Enersion
+
+singleton Style 1.0 Style.qml
+
+IconButton 1.0 components/IconButton.qml
+StatusIndicator 1.0 components/StatusIndicator.qml
+DioChannel 1.0 components/DioChannel.qml
+DioGrid 1.0 components/DioGrid.qml
+Card 1.0 components/Card.qml
+NavigationBar 1.0 components/NavigationBar.qml
+TopBar 1.0 components/TopBar.qml
+ConnectionStatus 1.0 components/ConnectionStatus.qml
+PrimaryButton 1.0 components/PrimaryButton.qml
+SettingsRow 1.0 components/SettingsRow.qml
+

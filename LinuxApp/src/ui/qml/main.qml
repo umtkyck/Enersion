@@ -1,264 +1,174 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+import QtQuick.Window 2.15
+import "."
+import "components"
+import "pages"
+
 /**
- * main.qml - Enersion Controller Main Window
- * Modern touch-friendly UI for STM32MP257 HDMI Touchscreen
+ * Enersion Control System - Main Application Window
+ * Modern Industrial UI for STM32MP257 MYIR Touchscreen
  */
-
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
-import QtQuick.Controls.Material
-import EnersionApp 1.0
-
 ApplicationWindow {
-    id: root
+    id: mainWindow
+    
     visible: true
     width: 1280
-    height: 720
-    title: "Enersion Controller"
+    height: 800
+    minimumWidth: 1024
+    minimumHeight: 600
     
-    // Material Design Theme - Industrial Dark
-    Material.theme: Material.Dark
-    Material.primary: "#00897B"      // Teal 600
-    Material.accent: "#26A69A"       // Teal 400
-    Material.background: "#121212"
-    Material.foreground: "#FFFFFF"
+    title: qsTr("Enersion Control System")
+    color: Style.bgDark
     
-    // Custom colors
-    readonly property color accentColor: "#00BFA5"
-    readonly property color successColor: "#4CAF50"
-    readonly property color warningColor: "#FF9800"
-    readonly property color errorColor: "#F44336"
-    readonly property color surfaceColor: "#1E1E1E"
-    readonly property color cardColor: "#2D2D2D"
+    // Current page index
+    property int currentPage: 0
     
-    // Main layout
-    ColumnLayout {
+    // Connection state (bound to C++ backend)
+    property bool isConnected: appController ? appController.isConnected : false
+    property int diActiveCount: diModel ? diModel.activeCount : 0
+    property int doActiveCount: doModel ? doModel.activeCount : 0
+    
+    // Page names for navigation
+    readonly property var pageNames: [
+        { name: "Dashboard", icon: "⌂" },
+        { name: "Digital Inputs", icon: "▣" },
+        { name: "Digital Outputs", icon: "◧" },
+        { name: "Settings", icon: "⚙" }
+    ]
+    
+    RowLayout {
         anchors.fill: parent
         spacing: 0
         
-        // Top Status Bar
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 48
-            color: surfaceColor
+        // === Left Navigation Bar ===
+        NavigationBar {
+            id: navBar
+            Layout.fillHeight: true
+            Layout.preferredWidth: Style.sidebarWidth
             
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 16
-                anchors.rightMargin: 16
-                spacing: 16
-                
-                // Logo/Title
-                Label {
-                    text: "⚡ ENERSION"
-                    font.pixelSize: 18
-                    font.bold: true
-                    color: accentColor
-                }
-                
-                // Connection indicator
-                Row {
-                    spacing: 8
-                    
-                    Rectangle {
-                        width: 12
-                        height: 12
-                        radius: 6
-                        color: AppController.deviceManager.connected ? successColor : errorColor
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    
-                    Label {
-                        text: AppController.deviceManager.connected ? 
-                              "Connected" : "Disconnected"
-                        font.pixelSize: 14
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-                
-                Item { Layout.fillWidth: true }
-                
-                // Device status indicators
-                Row {
-                    spacing: 16
-                    visible: AppController.deviceManager.connected
-                    
-                    // DI Controller status
-                    Row {
-                        spacing: 6
-                        
-                        Rectangle {
-                            width: 10
-                            height: 10
-                            radius: 5
-                            color: AppController.deviceManager.diOnline ? successColor : errorColor
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        
-                        Label {
-                            text: "DI: " + (AppController.deviceManager.diOnline ? 
-                                  AppController.deviceManager.diControllerHealth + "%" : "Offline")
-                            font.pixelSize: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                    
-                    // DO Controller status
-                    Row {
-                        spacing: 6
-                        
-                        Rectangle {
-                            width: 10
-                            height: 10
-                            radius: 5
-                            color: AppController.deviceManager.doOnline ? successColor : errorColor
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        
-                        Label {
-                            text: "DO: " + (AppController.deviceManager.doOnline ? 
-                                  AppController.deviceManager.doControllerHealth + "%" : "Offline")
-                            font.pixelSize: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                }
-                
-                // Version
-                Label {
-                    text: "v" + AppController.appVersion
-                    font.pixelSize: 12
-                    opacity: 0.6
-                }
+            currentIndex: currentPage
+            pages: pageNames
+            connected: isConnected
+            
+            onPageSelected: function(index) {
+                currentPage = index
             }
         }
         
-        // Main content area with navigation
-        RowLayout {
+        // === Main Content Area ===
+        Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 0
+            color: Style.bgDark
             
-            // Left Navigation
-            Rectangle {
-                Layout.preferredWidth: 80
-                Layout.fillHeight: true
-                color: surfaceColor
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
                 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.topMargin: 16
-                    spacing: 8
+                // === Top Bar ===
+                TopBar {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Style.headerHeight
                     
-                    // Navigation buttons
-                    Repeater {
-                        model: [
-                            { icon: "🏠", text: "Home", page: 0 },
-                            { icon: "📥", text: "DI", page: 1 },
-                            { icon: "📤", text: "DO", page: 2 },
-                            { icon: "⚙️", text: "Settings", page: 3 }
-                        ]
+                    title: pageNames[currentPage].name
+                    connected: isConnected
+                    diCount: diActiveCount
+                    doCount: doActiveCount
+                }
+                
+                // === Page Stack ===
+                StackLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.margins: Style.spacingL
+                    
+                    currentIndex: currentPage
+                    
+                    // Page 0: Dashboard
+                    DashboardPage {
+                        connected: isConnected
+                        diActiveCount: mainWindow.diActiveCount
+                        doActiveCount: mainWindow.doActiveCount
                         
-                        delegate: Rectangle {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 64
-                            Layout.leftMargin: 8
-                            Layout.rightMargin: 8
-                            radius: 8
-                            color: stackView.currentIndex === modelData.page ? 
-                                   accentColor : "transparent"
-                            
-                            ColumnLayout {
-                                anchors.centerIn: parent
-                                spacing: 4
-                                
-                                Label {
-                                    text: modelData.icon
-                                    font.pixelSize: 24
-                                    Layout.alignment: Qt.AlignHCenter
-                                }
-                                
-                                Label {
-                                    text: modelData.text
-                                    font.pixelSize: 10
-                                    font.bold: stackView.currentIndex === modelData.page
-                                    Layout.alignment: Qt.AlignHCenter
-                                }
+                        onNavigateTo: function(pageIndex) {
+                            currentPage = pageIndex
+                        }
+                    }
+                    
+                    // Page 1: Digital Inputs
+                    DigitalInputPage {
+                        model: diModel
+                    }
+                    
+                    // Page 2: Digital Outputs
+                    DigitalOutputPage {
+                        model: doModel
+                        
+                        onToggleOutput: function(channel) {
+                            if (appController) {
+                                appController.toggleOutput(channel)
                             }
-                            
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: stackView.currentIndex = modelData.page
+                        }
+                        
+                        onSetAllOutputs: function(state) {
+                            if (appController) {
+                                appController.setAllOutputs(state)
                             }
                         }
                     }
                     
-                    Item { Layout.fillHeight: true }
-                }
-            }
-            
-            // Page content
-            StackLayout {
-                id: stackView
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                
-                // Home Page
-                HomePage {
-                    id: homePage
-                }
-                
-                // Digital Input Page
-                DigitalInputPage {
-                    id: diPage
-                }
-                
-                // Digital Output Page
-                DigitalOutputPage {
-                    id: doPage
-                }
-                
-                // Settings Page
-                SettingsPage {
-                    id: settingsPage
-                }
-            }
-        }
-        
-        // Bottom Status Bar
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 32
-            color: surfaceColor
-            
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 16
-                anchors.rightMargin: 16
-                
-                Label {
-                    text: AppController.statusMessage
-                    font.pixelSize: 12
-                    opacity: 0.8
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-                
-                Label {
-                    text: Qt.formatDateTime(new Date(), "hh:mm:ss")
-                    font.pixelSize: 12
-                    opacity: 0.6
+                    // Page 3: Settings
+                    SettingsPage {
+                        controller: appController
+                        
+                        onConnect: function(port, baudrate) {
+                            if (appController) {
+                                appController.connectDevice(port, baudrate)
+                            }
+                        }
+                        
+                        onDisconnect: {
+                            if (appController) {
+                                appController.disconnectDevice()
+                            }
+                        }
+                    }
                 }
             }
         }
     }
     
-    // Update time every second
-    Timer {
-        interval: 1000
-        running: true
-        repeat: true
-        onTriggered: {} // Just triggers UI update for time
+    // === Startup Animation ===
+    Component.onCompleted: {
+        console.log("Enersion Control System started")
+        
+        // Auto-connect on startup (optional)
+        if (appController) {
+            appController.autoConnect()
+        }
+    }
+    
+    // === Keyboard Shortcuts ===
+    Shortcut {
+        sequence: "Ctrl+1"
+        onActivated: currentPage = 0
+    }
+    Shortcut {
+        sequence: "Ctrl+2"
+        onActivated: currentPage = 1
+    }
+    Shortcut {
+        sequence: "Ctrl+3"
+        onActivated: currentPage = 2
+    }
+    Shortcut {
+        sequence: "Ctrl+4"
+        onActivated: currentPage = 3
+    }
+    Shortcut {
+        sequence: "Ctrl+Q"
+        onActivated: Qt.quit()
     }
 }
-

@@ -106,3 +106,5 @@ void enersion_crc16_append(uint8_t *data, size_t length)
     }
 }
 
+
+
